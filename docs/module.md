@@ -9,26 +9,62 @@ ES6的Class只是面向对象编程的语法糖，升级了ES5的构造函数的
 ES6模块的设计思想，是尽量的静态化，使得编译时就能确定模块的依赖关系，以及输入和输出的变量。CommonJS和AMD模块，都只能在运行时确定这些东西。比如，CommonJS模块就是对象，输入时必须查找对象属性。
 
 ```javascript
+// CommonJS模块
 let { stat, exists, readFile } = require('fs');
+
+// 等同于
+let _fs = require('fs');
+let stat = _fs.stat, exists = _fs.exists, readfile = _fs.readfile;
 ```
 
-上面代码的实质是整体加载`fs`模块（即加载`fs`的所有方法），然后使用时用到3个方法。这种加载称为“运行时加载”。
+上面代码的实质是整体加载`fs`模块（即加载`fs`的所有方法），生成一个对象（`_fs`），然后再从这个对象上面读取3个方法。这种加载称为“运行时加载”，因为只有运行时才能得到这个对象，导致完全没办法在编译时做“静态优化”。
 
-ES6模块不是对象，而是通过export命令显式指定输出的代码，输入时也采用静态命令的形式。
+ES6模块不是对象，而是通过`export`命令显式指定输出的代码，输入时也采用静态命令的形式。
 
 ```javascript
+// ES6模块
 import { stat, exists, readFile } from 'fs';
 ```
 
-上面代码的实质是从`fs`模块加载3个方法，其他方法不加载。这种加载称为“编译时加载”，即ES6可以在编译时就完成模块编译，效率要比CommonJS模块的加载方式高。
+上面代码的实质是从`fs`模块加载3个方法，其他方法不加载。这种加载称为“编译时加载”，即ES6可以在编译时就完成模块编译，效率要比CommonJS模块的加载方式高。当然，这也导致了没法引用ES6模块本身，因为它不是对象。
 
-需要注意的是，ES6的模块自动采用严格模式，不管你有没有在模块头部加上`"use strict"`。
+由于ES6模块是编译时加载，使得静态分析成为可能。有了它，就能进一步拓宽JavaScript的语法，比如引入宏（macro）和类型检验（type system）这些只能靠静态分析实现的功能。
+
+除了静态加载带来的各种好处，ES6模块还有以下好处。
+
+- 不再需要UMD模块格式了，将来服务器和浏览器都会支持ES6模块格式。目前，通过各种工具库，其实已经做到了这一点。
+- 将来浏览器的新API就能用模块格式提供，不再必要做成全局变量或者`navigator`对象的属性。
+- 不再需要对象作为命名空间（比如`Math`对象），未来这些功能可以通过模块提供。
+
+## 严格模式
+
+ES6的模块自动采用严格模式，不管你有没有在模块头部加上`"use strict"`。
+
+严格模式主要有以下限制。
+
+- 变量必须声明后再使用
+- 函数的参数不能有同名属性，否则报错
+- 不能使用`with`语句
+- 不能对只读属性赋值，否则报错
+- 不能使用前缀0表示八进制数，否则报错
+- 不能删除不可删除的属性，否则报错
+- 不能删除变量`delete prop`，会报错，只能删除属性`delete global[prop]`
+- `eval`不会在它的外层作用域引入变量
+- `eval`和`arguments`不能被重新赋值
+- `arguments`不会自动反映函数参数的变化
+- 不能使用`arguments.callee`
+- 不能使用`arguments.caller`
+- 禁止`this`指向全局对象
+- 不能使用`fn.caller`和`fn.arguments`获取函数调用的堆栈
+- 增加了保留字（比如`protected`、`static`和`interface`）
+
+上面这些限制，模块都必须遵守。由于严格模式是ES5引入的，不属于ES6，所以请参阅相关ES5书籍，本书不再详细介绍了。
 
 ## export命令
 
-模块功能主要由两个命令构成：export和import。export命令用于规定模块的对外接口，import命令用于输入其他模块提供的功能。
+模块功能主要由两个命令构成：`export`和`import`。`export`命令用于规定模块的对外接口，`import`命令用于输入其他模块提供的功能。
 
-一个模块就是一个独立的文件。该文件内部的所有变量，外部无法获取。如果你希望外部能够读取模块内部的某个变量，就必须使用export关键字输出该变量。下面是一个JS文件，里面使用export命令输出变量。
+一个模块就是一个独立的文件。该文件内部的所有变量，外部无法获取。如果你希望外部能够读取模块内部的某个变量，就必须使用`export`关键字输出该变量。下面是一个JS文件，里面使用`export`命令输出变量。
 
 ```javascript
 // profile.js
@@ -37,7 +73,7 @@ export var lastName = 'Jackson';
 export var year = 1958;
 ```
 
-上面代码是profile.js文件，保存了用户信息。ES6将其视为一个模块，里面用export命令对外部输出了三个变量。
+上面代码是`profile.js`文件，保存了用户信息。ES6将其视为一个模块，里面用export命令对外部输出了三个变量。
 
 export的写法，除了像上面这样，还有另外一种。
 
@@ -50,7 +86,7 @@ var year = 1958;
 export {firstName, lastName, year};
 ```
 
-上面代码在export命令后面，使用大括号指定所要输出的一组变量。它与前一种写法（直接放置在var语句前）是等价的，但是应该优先考虑使用这种写法。因为这样就可以在脚本尾部，一眼看清楚输出了哪些变量。
+上面代码在`export`命令后面，使用大括号指定所要输出的一组变量。它与前一种写法（直接放置在var语句前）是等价的，但是应该优先考虑使用这种写法。因为这样就可以在脚本尾部，一眼看清楚输出了哪些变量。
 
 export命令除了输出变量，还可以输出函数或类（class）。
 
@@ -60,9 +96,9 @@ export function multiply (x, y) {
 };
 ```
 
-上面代码对外输出一个函数multiply。
+上面代码对外输出一个函数`multiply`。
 
-通常情况下，export输出的变量就是本来的名字，但是可以使用as关键字重命名。
+通常情况下，`export`输出的变量就是本来的名字，但是可以使用`as`关键字重命名。
 
 ```javascript
 function v1() { ... }
@@ -75,9 +111,27 @@ export {
 };
 ```
 
-上面代码使用as关键字，重命名了函数v1和v2的对外接口。重命名后，v2可以用不同的名字输出两次。
+上面代码使用`as`关键字，重命名了函数`v1`和`v2`的对外接口。重命名后，`v2`可以用不同的名字输出两次。
 
-最后，`export`命令可以出现在模块的任何位置，只要处于模块顶层就可以。如果处于块级作用域内，就会报错，下面的`import`命令也是如此。
+最后，`export`命令可以出现在模块的任何位置，只要处于模块顶层就可以。如果处于块级作用域内，就会报错，下面的`import`命令也是如此。这是因为处于条件代码块之中，就没法做静态优化了，违背了ES6模块的设计初衷。
+
+```javascript
+function foo() {
+  export default 'bar' // SyntaxError
+}
+foo()
+```
+
+上面代码中，`export`语句放在函数之中，结果报错。
+
+`export`语句输出的值是动态绑定，绑定其所在的模块。
+
+```javascript
+export var foo = 'bar';
+setTimeout(() => foo = 'baz', 500);
+```
+
+上面代码输出变量`foo`，值为`bar`，500毫秒之后变成`baz`。
 
 ## import命令
 
@@ -101,21 +155,15 @@ function setName(element) {
 import { lastName as surname } from './profile';
 ```
 
-ES6支持多重加载，即所加载的模块中又加载其他模块。
+注意，`import`命令具有提升效果，会提升到整个模块的头部，首先执行。
 
 ```javascript
-import { Vehicle } from './Vehicle';
+foo();
 
-class Car extends Vehicle {
-  move () {
-    console.log(this.name + ' is spinning wheels...')
-  }
-}
-
-export { Car }
+import { foo } from 'my_module';
 ```
 
-上面的模块先加载`Vehicle`模块，然后在其基础上添加了`move`方法，再作为一个新模块输出。
+上面的代码不会报错，因为`import`的执行早于`foo`的调用。
 
 如果在一个模块之中，先输入后输出同一个模块，`import`语句可以与`export`语句写在一起。
 
@@ -138,6 +186,14 @@ export v from "mod";
 // 现行的写法
 export {v} from "mod";
 ```
+
+`import`语句会执行所加载的模块，因此可以有下面的写法。
+
+```javascript
+import 'lodash'
+```
+
+上面代码仅仅执行`lodash`模块，但是不输入任何值。
 
 ## 模块的整体加载
 
@@ -176,21 +232,6 @@ import * as circle from './circle';
 console.log("圆面积：" + circle.area(4));
 console.log("圆周长：" + circle.circumference(14));
 ```
-
-## module命令
-
-module命令可以取代import语句，达到整体输入模块的作用。
-
-```javascript
-// main.js
-
-module circle from './circle';
-
-console.log("圆面积：" + circle.area(4));
-console.log("圆周长：" + circle.circumference(14));
-```
-
-module命令后面跟一个变量，表示输入的模块定义在该变量上。
 
 ## export default命令
 
@@ -239,13 +280,19 @@ export default foo;
 下面比较一下默认输出和正常输出。
 
 ```javascript
+// 输出
+export default function crc32() {
+  // ...
+}
+// 输入
 import crc32 from 'crc32';
-// 对应的输出
-export default function crc32(){}
 
-import { crc32 } from 'crc32';
-// 对应的输出
-export function crc32(){};
+// 输出
+export function crc32() {
+  // ...
+};
+// 输入
+import {crc32} from 'crc32';
 ```
 
 上面代码的两组写法，第一组是使用`export default`时，对应的`import`语句不需要使用大括号；第二组是不使用`export default`时，对应的`import`语句需要使用大括号。
@@ -298,23 +345,21 @@ let o = new MyClass();
 
 模块之间也可以继承。
 
-假设有一个circleplus模块，继承了circle模块。
+假设有一个`circleplus`块，继承了`circle`模块。
 
 ```javascript
-
 // circleplus.js
 
 export * from 'circle';
 export var e = 2.71828182846;
 export default function(x) {
-    return Math.exp(x);
+  return Math.exp(x);
 }
-
 ```
 
-上面代码中的“export *”，表示输出circle模块的所有属性和方法，export default命令定义模块的默认方法。
+上面代码中的`export *`，表示再输出`circle`模块的所有属性和方法。注意，`export *`命令会忽略`circle`模块的`default`方法。然后，上面代码又输出了自定义的`e`变量和默认方法。
 
-这时，也可以将circle的属性或方法，改名后再输出。
+这时，也可以将`circle`的属性或方法，改名后再输出。
 
 ```javascript
 // circleplus.js
@@ -322,23 +367,335 @@ export default function(x) {
 export { area as circleArea } from 'circle';
 ```
 
-上面代码表示，只输出circle模块的area方法，且将其改名为circleArea。
+上面代码表示，只输出`circle`模块的`area`方法，且将其改名为`circleArea`。
 
 加载上面模块的写法如下。
 
 ```javascript
 // main.js
 
-module math from "circleplus";
+import * as math from "circleplus";
 import exp from "circleplus";
-console.log(exp(math.E));
+console.log(exp(math.e));
 ```
 
-上面代码中的"import exp"表示，将circleplus模块的默认方法加载为exp方法。
+上面代码中的`import exp`表示，将`circleplus`模块的默认方法加载为`exp`方法。
+
+## ES6模块加载的实质
+
+ES6模块加载的机制，与CommonJS模块完全不同。CommonJS模块输出的是一个值的拷贝，而ES6模块输出的是值的引用。
+
+CommonJS模块输出的是被输出值的拷贝，也就是说，一旦输出一个值，模块内部的变化就影响不到这个值。请看下面这个模块文件`lib.js`的例子。
+
+```javascript
+// lib.js
+var counter = 3;
+function incCounter() {
+  counter++;
+}
+module.exports = {
+  counter: counter,
+  incCounter: incCounter,
+};
+```
+
+上面代码输出内部变量`counter`和改写这个变量的内部方法`incCounter`。然后，在`main.js`里面加载这个模块。
+
+```javascript
+// main.js
+var counter = require('./lib').counter;
+var incCounter = require('./lib').incCounter;
+
+console.log(counter);  // 3
+incCounter();
+console.log(counter); // 3
+```
+
+上面代码说明，`counter`输出以后，`lib.js`模块内部的变化就影响不到`counter`了。
+
+ES6模块的运行机制与CommonJS不一样，它遇到模块加载命令`import`时，不会去执行模块，而是只生成一个动态的只读引用。等到真的需要用到时，再到模块里面去取值，换句话说，ES6的输入有点像Unix系统的”符号连接“，原始值变了，输入值也会跟着变。因此，ES6模块是动态引用，并且不会缓存值，模块里面的变量绑定其所在的模块。
+
+还是举上面的例子。
+
+```javascript
+// lib.js
+export let counter = 3;
+export function incCounter() {
+  counter++;
+}
+
+// main.js
+import { counter, incCounter } from './lib';
+console.log(counter); // 3
+incCounter();
+console.log(counter); // 4
+```
+
+上面代码说明，ES6模块输入的变量`counter`是活的，完全反应其所在模块`lib.js`内部的变化。
+
+再举一个出现在`export`一节中的例子。
+
+```javascript
+// m1.js
+export var foo = 'bar';
+setTimeout(() => foo = 'baz', 500);
+
+// m2.js
+import {foo} from './m1.js';
+console.log(foo);
+setTimeout(() => console.log(foo), 500);
+```
+
+上面代码中，`m1.js`的变量`foo`，在刚加载时等于`bar`，过了500毫秒，又变为等于`baz`。
+
+让我们看看，`m2.js`能否正确读取这个变化。
+
+```bash
+$ babel-node m2.js
+
+bar
+baz
+```
+
+上面代码表明，ES6模块不会缓存运行结果，而是动态地去被加载的模块取值，并且变量总是绑定其所在的模块。
+
+由于ES6输入的模块变量，只是一个”符号连接“，所以这个变量是只读的，对它进行重新赋值会报错。
+
+```javascript
+// lib.js
+export let obj = {};
+
+// main.js
+import { obj } from './lib';
+
+obj.prop = 123; // OK
+obj = {}; // TypeError
+```
+
+上面代码中，`main.js`从`lib.js`输入变量`obj`，可以对`obj`添加属性，但是重新赋值就会报错。因为变量`obj`指向的地址是只读的，不能重新赋值，这就好比`main.js`创造了一个名为`obj`的const变量。
+
+## 循环加载
+
+“循环加载”（circular dependency）指的是，`a`脚本的执行依赖`b`脚本，而`b`脚本的执行又依赖`a`脚本。
+
+```javascript
+// a.js
+var b = require('b');
+
+// b.js
+var a = require('a');
+```
+
+通常，“循环加载”表示存在强耦合，如果处理不好，还可能导致递归加载，使得程序无法执行，因此应该避免出现。
+
+但是实际上，这是很难避免的，尤其是依赖关系复杂的大项目，很容易出现`a`依赖b，`b`依赖`c`，`c`又依赖`a`这样的情况。这意味着，模块加载机制必须考虑“循环加载”的情况。
+
+对于JavaScript语言来说，目前最常见的两种模块格式CommonJS和ES6，处理“循环加载”的方法是不一样的，返回的结果也不一样。
+
+### CommonJS模块的加载原理
+
+介绍ES6如何处理"循环加载"之前，先介绍目前最流行的CommonJS模块格式的加载原理。
+
+CommonJS的一个模块，就是一个脚本文件。`require`命令第一次加载该脚本，就会执行整个脚本，然后在内存生成一个对象。
+
+```javascript
+{
+  id: '...',
+  exports: { ... },
+  loaded: true,
+  ...
+}
+```
+
+上面代码中，该对象的`id`属性是模块名，`exports`属性是模块输出的各个接口，`loaded`属性是一个布尔值，表示该模块的脚本是否执行完毕。其他还有很多属性，这里都省略了。
+
+以后需要用到这个模块的时候，就会到`exports`属性上面取值。即使再次执行`require`命令，也不会再次执行该模块，而是到缓存之中取值。也就是说，CommonJS模块无论加载多少次，都只会在第一次加载时运行一次，以后再加载，就返回第一次运行的结果，除非手动清除系统缓存。
+
+### CommonJS模块的循环加载
+
+CommonJS模块的重要特性是加载时执行，即脚本代码在`require`的时候，就会全部执行。一旦出现某个模块被"循环加载"，就只输出已经执行的部分，还未执行的部分不会输出。
+
+让我们来看，Node[官方文档](https://nodejs.org/api/modules.html#modules_cycles)里面的例子。脚本文件`a.js`代码如下。
+
+```javascript
+exports.done = false;
+var b = require('./b.js');
+console.log('在 a.js 之中，b.done = %j', b.done);
+exports.done = true;
+console.log('a.js 执行完毕');
+```
+
+上面代码之中，`a.js`脚本先输出一个`done`变量，然后加载另一个脚本文件`b.js`。注意，此时`a.js`代码就停在这里，等待`b.js`执行完毕，再往下执行。
+
+再看`b.js`的代码。
+
+```javascript
+exports.done = false;
+var a = require('./a.js');
+console.log('在 b.js 之中，a.done = %j', a.done);
+exports.done = true;
+console.log('b.js 执行完毕');
+```
+
+上面代码之中，`b.js`执行到第二行，就会去加载`a.js`，这时，就发生了“循环加载”。系统会去`a.js`模块对应对象的`exports`属性取值，可是因为`a.js`还没有执行完，从`exports`属性只能取回已经执行的部分，而不是最后的值。
+
+`a.js`已经执行的部分，只有一行。
+
+```javascript
+exports.done = false;
+```
+
+因此，对于`b.js`来说，它从`a.js`只输入一个变量`done`，值为`false`。
+
+然后，`b.js`接着往下执行，等到全部执行完毕，再把执行权交还给`a.js`。于是，`a.js`接着往下执行，直到执行完毕。我们写一个脚本`main.js`，验证这个过程。
+
+```javascript
+var a = require('./a.js');
+var b = require('./b.js');
+console.log('在 main.js 之中, a.done=%j, b.done=%j', a.done, b.done);
+```
+
+执行`main.js`，运行结果如下。
+
+```bash
+$ node main.js
+
+在 b.js 之中，a.done = false
+b.js 执行完毕
+在 a.js 之中，b.done = true
+a.js 执行完毕
+在 main.js 之中, a.done=true, b.done=true
+```
+
+上面的代码证明了两件事。一是，在`b.js`之中，`a.js`没有执行完毕，只执行了第一行。二是，`main.js`执行到第二行时，不会再次执行`b.js`，而是输出缓存的`b.js`的执行结果，即它的第四行。
+
+```javascript
+exports.done = true;
+```
+
+总之，CommonJS输入的是被输出值的拷贝，不是引用。
+
+另外，由于CommonJS模块遇到循环加载时，返回的是当前已经执行的部分的值，而不是代码全部执行后的值，两者可能会有差异。所以，输入变量的时候，必须非常小心。
+
+```javascript
+var a = require('a'); // 安全的写法
+var foo = require('a').foo; // 危险的写法
+
+exports.good = function (arg) {
+  return a.foo('good', arg); // 使用的是 a.foo 的最新值
+};
+
+exports.bad = function (arg) {
+  return foo('bad', arg); // 使用的是一个部分加载时的值
+};
+```
+
+上面代码中，如果发生循环加载，`require('a').foo`的值很可能后面会被改写，改用`require('a')`会更保险一点。
+
+### ES6模块的循环加载
+
+ES6处理“循环加载”与CommonJS有本质的不同。ES6模块是动态引用，遇到模块加载命令`import`时，不会去执行模块，只是生成一个指向被加载模块的引用，需要开发者自己保证，真正取值的时候能够取到值。
+
+请看下面的例子（摘自 Dr. Axel Rauschmayer 的[《Exploring ES6》](http://exploringjs.com/es6/ch_modules.html)）。
+
+```javascript
+// a.js
+import {bar} from './b.js';
+export function foo() {
+  bar();
+  console.log('执行完毕');
+}
+foo();
+
+// b.js
+import {foo} from './a.js';
+export function bar() {
+  if (Math.random() > 0.5) {
+    foo();
+  }
+}
+```
+
+按照CommonJS规范，上面的代码是没法执行的。`a`先加载`b`，然后`b`又加载`a`，这时`a`还没有任何执行结果，所以输出结果为`null`，即对于`b.js`来说，变量`foo`的值等于`null`，后面的`foo()`就会报错。
+
+但是，ES6可以执行上面的代码。
+
+```bash
+$ babel-node a.js
+
+执行完毕
+```
+
+`a.js`之所以能够执行，原因就在于ES6加载的变量，都是动态引用其所在的模块。只要引用是存在的，代码就能执行。
+
+我们再来看ES6模块加载器[SystemJS](https://github.com/ModuleLoader/es6-module-loader/blob/master/docs/circular-references-bindings.md)给出的一个例子。
+
+```javascript
+// even.js
+import { odd } from './odd'
+export var counter = 0;
+export function even(n) {
+  counter++;
+  return n == 0 || odd(n - 1);
+}
+
+// odd.js
+import { even } from './even';
+export function odd(n) {
+  return n != 0 && even(n - 1);
+}
+```
+
+上面代码中，`even.js`里面的函数`even`有一个参数`n`，只要不等于0，就会减去1，传入加载的`odd()`。`odd.js`也会做类似操作。
+
+运行上面这段代码，结果如下。
+
+```javascript
+$ babel-node
+> import * as m from './even.js';
+> m.even(10);
+true
+> m.counter
+6
+> m.even(20)
+true
+> m.counter
+17
+```
+
+上面代码中，参数`n`从10变为0的过程中，`foo()`一共会执行6次，所以变量`counter`等于6。第二次调用`even（）`时，参数`n`从20变为0，`foo()`一共会执行11次，加上前面的6次，所以变量`counter`等于17。
+
+这个例子要是改写成CommonJS，就根本无法执行，会报错。
+
+```javascript
+// even.js
+var odd = require('./odd');
+var counter = 0;
+exports.counter = counter;
+exports.even = function(n) {
+  counter++;
+  return n == 0 || odd(n - 1);
+}
+
+// odd.js
+var even = require('./even').even;
+module.exports = function(n) {
+  return n != 0 && even(n - 1);
+}
+```
+
+上面代码中，`even.js`加载`odd.js`，而`odd.js`又去加载`even.js`，形成“循环加载”。这时，执行引擎就会输出`even.js`已经执行的部分（不存在任何结果），所以在`odd.js`之中，变量`even`等于`null`，等到后面调用`even(n-1)`就会报错。
+
+```bash
+$ node
+> var m = require('./even');
+> m.even(10)
+TypeError: even is not a function
+```
 
 ## ES6模块的转码
 
-浏览器目前还不支持ES6模块，为了现在就能使用，可以将转为ES5的写法。
+浏览器目前还不支持ES6模块，为了现在就能使用，可以将转为ES5的写法。除了Babel可以用来转码之外，还有以下两个方法，也可以用来转码。
 
 ### ES6 module transpiler
 
@@ -356,7 +713,7 @@ $ npm install -g es6-module-transpiler
 $ compile-modules convert file1.js file2.js
 ```
 
-o参数可以指定转码后的文件名。
+`-o`参数可以指定转码后的文件名。
 
 ```bash
 $ compile-modules convert -o out.js file1.js

@@ -119,7 +119,7 @@ fproxy.foo; // 'Hello, foo'
 
 **（1）get(target, propKey, receiver)**
 
-拦截对象属性的读取，比如`proxy.foo`和`proxy['foo']`，返回类型不限。最后一个参数receiver可选，当target对象设置了propKey属性的get函数时，receiver对象会绑定get函数的this对象。
+拦截对象属性的读取，比如`proxy.foo`和`proxy['foo']`，返回类型不限。最后一个参数`receiver`可选，当`target`对象设置了`propKey`属性的`get`函数时，`receiver`对象会绑定`get`函数的`this`对象。
 
 **（2）set(target, propKey, value, receiver)**
 
@@ -137,9 +137,9 @@ fproxy.foo; // 'Hello, foo'
 
 拦截`for (var x in proxy)`，返回一个遍历器。
 
-**（6）hasOwn(target, propKey)**
+**（6）has(target, propKey)**
 
-拦截`proxy.hasOwnProperty('foo')`，返回一个布尔值。
+拦截`in`运算符，返回一个布尔值。
 
 **（7）ownKeys(target)**
 
@@ -177,15 +177,15 @@ fproxy.foo; // 'Hello, foo'
 
 **（15）construct(target, args, proxy)**
 
-拦截Proxy实例作为构造函数调用的操作，比如new proxy(...args)。
+拦截Proxy实例作为构造函数调用的操作，比如`new proxy(...args)`。
 
 ## Proxy实例的方法
 
-下面是其中几个重要拦截方法的详细介绍。
+下面是上面这些拦截方法的详细介绍。
 
 ### get()
 
-get方法用于拦截某个属性的读取操作。上文已经有一个例子，下面是另一个拦截读取操作的例子。
+`get`方法用于拦截某个属性的读取操作。上文已经有一个例子，下面是另一个拦截读取操作的例子。
 
 ```javascript
 var person = {
@@ -206,9 +206,50 @@ proxy.name // "张三"
 proxy.age // 抛出一个错误
 ```
 
-上面代码表示，如果访问目标对象不存在的属性，会抛出一个错误。如果没有这个拦截函数，访问不存在的属性，只会返回undefined。
+上面代码表示，如果访问目标对象不存在的属性，会抛出一个错误。如果没有这个拦截函数，访问不存在的属性，只会返回`undefined`。
 
-利用proxy，可以将读取属性的操作（get），转变为执行某个函数。
+`get`方法可以继承。
+
+```javascript
+let proto = new Proxy({}, {
+  get(target, propertyKey, receiver) {
+    console.log('GET '+propertyKey);
+    return target[propertyKey];
+  }
+});
+
+let obj = Object.create(proto);
+obj.xxx // "GET xxx"
+```
+
+上面代码中，拦截操作定义在Prototype对象上面，所以如果读取`obj`对象继承的属性时，拦截会生效。
+
+下面的例子使用`get`拦截，实现数组读取负数的索引。
+
+```javascript
+function createArray(...elements) {
+  let handler = {
+    get(target, propKey, receiver) {
+      let index = Number(propKey);
+      if (index < 0) {
+        propKey = String(target.length + index);
+      }
+      return Reflect.get(target, propKey, receiver);
+    }
+  };
+
+  let target = [];
+  target.push(...elements);
+  return new Proxy(target, handler);
+}
+
+let arr = createArray('a', 'b', 'c');
+arr[-1] // c
+```
+
+上面代码中，数组的位置参数是`-1`，就会输出数组的倒数最后一个成员。
+
+利用proxy，可以将读取属性的操作（`get`），转变为执行某个函数，从而实现属性的链式操作。
 
 ```javascript
 var pipe = (function () {
@@ -229,11 +270,11 @@ var pipe = (function () {
   }
 }());
 
-var double = function (n) { return n*2 };
-var pow = function (n) { return n*n };
-var reverseInt = function (n) { return n.toString().split('').reverse().join('')|0 };
+var double = n => n * 2;
+var pow = n => n * n;
+var reverseInt = n => n.toString().split('').reverse().join('') | 0;
 
-pipe(3) . double . pow . reverseInt . get
+pipe(3).double.pow.reverseInt.get
 // 63
 ```
 
@@ -340,10 +381,10 @@ var twice = {
   apply (target, ctx, args) {
     return Reflect.apply(...arguments) * 2;
   }
-}
+};
 function sum (left, right) {
   return left + right;
-}
+};
 var proxy = new Proxy(sum, twice);
 proxy(1, 2) // 6
 proxy.call(null, 5, 6) // 22
@@ -370,10 +411,10 @@ var handler = {
     }
     return key in target;
   }
-}
+};
 var target = { _prop: 'foo', prop: 'foo' };
-'_prop' in proxy
-// false
+var proxy = new Proxy(target, handler);
+'_prop' in proxy // false
 ```
 
 上面代码中，如果原对象的属性名的第一个字符是下划线，`proxy.has`就会返回`false`，从而不会被`in`运算符发现。
@@ -728,19 +769,44 @@ revoke();
 proxy.foo // TypeError: Revoked
 ```
 
-Proxy.revocable方法返回一个对象，该对象的proxy属性是Proxy实例，revoke属性是一个函数，可以取消Proxy实例。上面代码中，当执行revoke函数之后，再访问Proxy实例，就会抛出一个错误。
+`Proxy.revocable`方法返回一个对象，该对象的`proxy`属性是`Proxy`实例，`revoke`属性是一个函数，可以取消`Proxy`实例。上面代码中，当执行`revoke`函数之后，再访问`Proxy`实例，就会抛出一个错误。
 
 ## Reflect概述
 
-Reflect对象与Proxy对象一样，也是ES6为了操作对象而提供的新API。Reflect对象的设计目的有这样几个。
+`Reflect`对象与`Proxy`对象一样，也是ES6为了操作对象而提供的新API。`Reflect`对象的设计目的有这样几个。
 
-（1） 将Object对象的一些明显属于语言层面的方法，放到Reflect对象上。现阶段，某些方法同时在Object和Reflect对象上部署，未来的新方法将只部署在Reflect对象上。
+（1） 将`Object`对象的一些明显属于语言内部的方法（比如`Object.defineProperty`），放到`Reflect`对象上。现阶段，某些方法同时在`Object`和`Reflect`对象上部署，未来的新方法将只部署在`Reflect`对象上。
 
-（2） 修改某些Object方法的返回结果，让其变得更合理。比如，`Object.defineProperty(obj, name, desc)`在无法定义属性时，会抛出一个错误，而`Reflect.defineProperty(obj, name, desc)`则会返回false。
+（2） 修改某些Object方法的返回结果，让其变得更合理。比如，`Object.defineProperty(obj, name, desc)`在无法定义属性时，会抛出一个错误，而`Reflect.defineProperty(obj, name, desc)`则会返回`false`。
 
-（3） 让Object操作都变成函数行为。某些Object操作是命令式，比如`name in obj`和`delete obj[name]`，而`Reflect.has(obj, name)`和`Reflect.deleteProperty(obj, name)`让它们变成了函数行为。
+```javascript
+// 老写法
+try {
+  Object.defineProperty(target, property, attributes);
+  // success
+} catch (e) {
+  // failure
+}
 
-（4）Reflect对象的方法与Proxy对象的方法一一对应，只要是Proxy对象的方法，就能在Reflect对象上找到对应的方法。这就让Proxy对象可以方便地调用对应的Reflect方法，完成默认行为，作为修改行为的基础。也就是说，不管Proxy怎么修改默认行为，你总可以在Reflect上获取默认行为。
+// 新写法
+if (Reflect.defineProperty(target, property, attributes)) {
+  // success
+} else {
+  // failure
+}
+```
+
+（3） 让`Object`操作都变成函数行为。某些`Object`操作是命令式，比如`name in obj`和`delete obj[name]`，而`Reflect.has(obj, name)`和`Reflect.deleteProperty(obj, name)`让它们变成了函数行为。
+
+```javascript
+// 老写法
+'assign' in Object // true
+
+// 新写法
+Reflect.has(Object, 'assign') // true
+```
+
+（4）`Reflect`对象的方法与`Proxy`对象的方法一一对应，只要是`Proxy`对象的方法，就能在`Reflect`对象上找到对应的方法。这就让`Proxy`对象可以方便地调用对应的`Reflect`方法，完成默认行为，作为修改行为的基础。也就是说，不管`Proxy`怎么修改默认行为，你总可以在`Reflect`上获取默认行为。
 
 ```javascript
 Proxy(target, {
@@ -754,51 +820,65 @@ Proxy(target, {
 });
 ```
 
-上面代码中，Proxy方法拦截target对象的属性赋值行为。它采用`Reflect.set`方法将值赋值给对象的属性，然后再部署额外的功能。
+上面代码中，`Proxy`方法拦截`target`对象的属性赋值行为。它采用`Reflect.set`方法将值赋值给对象的属性，然后再部署额外的功能。
 
-下面是get方法的例子。
+下面是另一个例子。
 
 ```javascript
 var loggedObj = new Proxy(obj, {
-  get: function(target, name) {
-    console.log("get", target, name);
+  get(target, name) {
+    console.log('get', target, name);
     return Reflect.get(target, name);
+  },
+  deleteProperty(target, name) {
+    console.log('delete' + name);
+    return Reflect.deleteProperty(target, name);
+  },
+  has(target, name) {
+    console.log('has' + name);
+    return Reflect.has(target, name);
   }
 });
 ```
 
+上面代码中，每一个`Proxy`对象的拦截操作（`get`、`delete`、`has`），内部都调用对应的Reflect方法，保证原生行为能够正常执行。添加的工作，就是将每一个操作输出一行日志。
+
+有了`Reflect`对象以后，很多操作会更易读。
+
+```javascript
+// 老写法
+Function.prototype.apply.call(Math.floor, undefined, [1.75]) // 1
+
+// 新写法
+Reflect.apply(Math.floor, undefined, [1.75]) // 1
+```
+
 ## Reflect对象的方法
 
-Reflect对象的方法清单如下。
+`Reflect`对象的方法清单如下，共14个。
 
-- Reflect.getOwnPropertyDescriptor(target,name)
-- Reflect.defineProperty(target,name,desc)
-- Reflect.getOwnPropertyNames(target)
-- Reflect.getPrototypeOf(target)
-- Reflect.setPrototypeOf(target, prototype)
-- Reflect.deleteProperty(target,name)
-- Reflect.enumerate(target)
-- Reflect.freeze(target)
-- Reflect.seal(target)
-- Reflect.preventExtensions(target)
-- Reflect.isFrozen(target)
-- Reflect.isSealed(target)
-- Reflect.isExtensible(target)
-- Reflect.has(target,name)
-- Reflect.hasOwn(target,name)
-- Reflect.keys(target)
-- Reflect.get(target,name,receiver)
-- Reflect.set(target,name,value,receiver)
 - Reflect.apply(target,thisArg,args)
 - Reflect.construct(target,args)
+- Reflect.get(target,name,receiver)
+- Reflect.set(target,name,value,receiver)
+- Reflect.defineProperty(target,name,desc)
+- Reflect.deleteProperty(target,name)
+- Reflect.has(target,name)
+- Reflect.ownKeys(target)
+- Reflect.enumerate(target)
+- Reflect.isExtensible(target)
+- Reflect.preventExtensions(target)
+- Reflect.getOwnPropertyDescriptor(target, name)
+- Reflect.getPrototypeOf(target)
+- Reflect.setPrototypeOf(target, prototype)
 
-上面这些方法的作用，大部分与Object对象的同名方法的作用都是相同的。下面是对其中几个方法的解释。
+上面这些方法的作用，大部分与`Object`对象的同名方法的作用都是相同的，而且它与`Proxy`对象的方法是一一对应的。下面是对其中几个方法的解释。
 
-**（1）Reflect.get(target,name,receiver)**
+**（1）Reflect.get(target, name, receiver)**
 
-查找并返回target对象的name属性，如果没有该属性，则返回undefined。
+查找并返回`target`对象的`name`属性，如果没有该属性，则返回`undefined`。
 
-如果name属性部署了读取函数，则读取函数的this绑定receiver。
+如果`name`属性部署了读取函数，则读取函数的this绑定`receiver`。
 
 ```javascript
 var obj = {
@@ -813,7 +893,7 @@ Reflect.get(obj, "foo", wrapper);
 
 **（2）Reflect.set(target, name, value, receiver)**
 
-设置target对象的name属性等于value。如果name属性设置了赋值函数，则赋值函数的this绑定receiver。
+设置`target`对象的`name`属性等于`value`。如果`name`属性设置了赋值函数，则赋值函数的`this`绑定`receiver`。
 
 **（3）Reflect.has(obj, name)**
 
@@ -823,17 +903,17 @@ Reflect.get(obj, "foo", wrapper);
 
 等同于`delete obj[name]`。
 
-**（5）Refl2ect.construct(target, args)**
+**（5）Reflect.construct(target, args)**
 
-等同于`new target(...args)`，这提供了一种不使用new，来调用构造函数的方法。
+等同于`new target(...args)`，这提供了一种不使用`new`，来调用构造函数的方法。
 
 **（6）Reflect.getPrototypeOf(obj)**
 
-读取对象的\_\_proto\_\_属性，等同于`Object.getPrototypeOf(obj)`。
+读取对象的`__proto__`属性，对应`Object.getPrototypeOf(obj)`。
 
 **（7）Reflect.setPrototypeOf(obj, newProto)**
 
-设置对象的\_\_proto\_\_属性。注意，Object对象没有对应这个方法的方法。
+设置对象的`__proto__`属性，对应`Object.setPrototypeOf(obj, newProto)`。
 
 **（8）Reflect.apply(fun,thisArg,args)**
 

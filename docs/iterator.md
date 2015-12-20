@@ -12,17 +12,23 @@ Iterator的遍历过程是这样的。
 
 （1）创建一个指针对象，指向当前数据结构的起始位置。也就是说，遍历器对象本质上，就是一个指针对象。
 
-（2）第一次调用指针对象的next方法，可以将指针指向数据结构的第一个成员。
+（2）第一次调用指针对象的`next`方法，可以将指针指向数据结构的第一个成员。
 
-（3）第二次调用指针对象的next方法，指针就指向数据结构的第二个成员。
+（3）第二次调用指针对象的`next`方法，指针就指向数据结构的第二个成员。
 
-（4）不断调用指针对象的next方法，直到它指向数据结构的结束位置。
+（4）不断调用指针对象的`next`方法，直到它指向数据结构的结束位置。
 
-每一次调用next方法，都会返回数据结构的当前成员的信息。具体来说，就是返回一个包含value和done两个属性的对象。其中，value属性是当前成员的值，done属性是一个布尔值，表示遍历是否结束。
+每一次调用`next`方法，都会返回数据结构的当前成员的信息。具体来说，就是返回一个包含`value`和`done`两个属性的对象。其中，`value`属性是当前成员的值，`done`属性是一个布尔值，表示遍历是否结束。
 
 下面是一个模拟next方法返回值的例子。
 
 ```javascript
+var it = makeIterator(['a', 'b']);
+
+it.next() // { value: "a", done: false }
+it.next() // { value: "b", done: false }
+it.next() // { value: undefined, done: true }
+
 function makeIterator(array){
   var nextIndex = 0;
   return {
@@ -33,25 +39,41 @@ function makeIterator(array){
     }
   }
 }
-
-var it = makeIterator(['a', 'b']);
-
-it.next() // { value: "a", done: false }
-it.next() // { value: "b", done: false }
-it.next() // { value: undefined, done: true }
 ```
 
-上面代码定义了一个makeIterator函数，它是一个遍历器生成函数，作用就是返回一个遍历器对象。对数组`['a', 'b']`执行这个函数，就会返回该数组的遍历器对象（即指针对象）it。
+上面代码定义了一个`makeIterator`函数，它是一个遍历器生成函数，作用就是返回一个遍历器对象。对数组`['a', 'b']`执行这个函数，就会返回该数组的遍历器对象（即指针对象）`it`。
 
-指针对象的next方法，用来移动指针。开始时，指针指向数组的开始位置。然后，每次调用next方法，指针就会指向数组的下一个成员。第一次调用，指向a；第二次调用，指向b。
+指针对象的`next`方法，用来移动指针。开始时，指针指向数组的开始位置。然后，每次调用`next`方法，指针就会指向数组的下一个成员。第一次调用，指向`a`；第二次调用，指向`b`。
 
-next方法返回一个对象，表示当前数据成员的信息。这个对象具有value和done两个属性，value属性返回当前位置的成员，done属性是一个布尔值，表示遍历是否结束，即是否还有必要再一次调用next方法。
+`next`方法返回一个对象，表示当前数据成员的信息。这个对象具有`value`和`done`两个属性，`value`属性返回当前位置的成员，`done`属性是一个布尔值，表示遍历是否结束，即是否还有必要再一次调用`next`方法。
 
-总之，调用指针对象的next方法，就可以遍历事先给定的数据结构。
+总之，调用指针对象的`next`方法，就可以遍历事先给定的数据结构。
+
+对于遍历器对象来说，`done: false`和`value: undefined`属性都是可以省略的，因此上面的`makeIterator`函数可以简写成下面的形式。
+
+```javascript
+function makeIterator(array){
+  var nextIndex = 0;
+  return {
+    next: function(){
+      return nextIndex < array.length ?
+        {value: array[nextIndex++]} :
+        {done: true};
+    }
+  }
+}
+```
 
 由于Iterator只是把接口规格加到数据结构之上，所以，遍历器与它所遍历的那个数据结构，实际上是分开的，完全可以写出没有对应数据结构的遍历器对象，或者说用遍历器对象模拟出数据结构。下面是一个无限运行的遍历器对象的例子。
 
 ```javascript
+var it = idMaker();
+
+it.next().value // '0'
+it.next().value // '1'
+it.next().value // '2'
+// ...
+
 function idMaker(){
   var index = 0;
 
@@ -61,18 +83,11 @@ function idMaker(){
     }
   }
 }
-
-var it = idMaker();
-
-it.next().value // '0'
-it.next().value // '1'
-it.next().value // '2'
-// ...
 ```
 
-上面的例子中，遍历器生成函数idMaker，返回一个遍历器对象（即指针对象）。但是并没有对应的数据结构，或者说，遍历器对象自己描述了一个数据结构出来。
+上面的例子中，遍历器生成函数`idMaker`，返回一个遍历器对象（即指针对象）。但是并没有对应的数据结构，或者说，遍历器对象自己描述了一个数据结构出来。
 
-在ES6中，有些数据结构原生具备Iterator接口（比如数组），即不用任何处理，就可以被for...of循环遍历，有些就不行（比如对象）。原因在于，这些数据结构原生部署了Symbol.iterator属性（详见下文），另外一些数据结构没有。凡是部署了Symbol.iterator属性的数据结构，就称为部署了遍历器接口。调用这个接口，就会返回一个遍历器对象。
+在ES6中，有些数据结构原生具备Iterator接口（比如数组），即不用任何处理，就可以被`for...of`循环遍历，有些就不行（比如对象）。原因在于，这些数据结构原生部署了`Symbol.iterator`属性（详见下文），另外一些数据结构没有。凡是部署了`Symbol.iterator`属性的数据结构，就称为部署了遍历器接口。调用这个接口，就会返回一个遍历器对象。
 
 如果使用TypeScript的写法，遍历器接口（Iterable）、指针对象（Iterator）和next方法返回值的规格可以描述如下。
 
@@ -233,7 +248,7 @@ NodeList.prototype[Symbol.iterator] = [][Symbol.iterator];
 [...document.querySelectorAll('div')] // 可以执行了
 ```
 
-下面是对象调用数组的`Symbol.iterator`方法的例子。
+下面是类似数组的对象调用数组的`Symbol.iterator`方法的例子。
 
 ```javascript
 let iterable = {
@@ -245,6 +260,21 @@ let iterable = {
 };
 for (let item of iterable) {
   console.log(item); // 'a', 'b', 'c'
+}
+```
+
+注意，普通对象部署数组的`Symbol.iterator`方法，并无效果。
+
+```javascript
+let iterable = {
+  a: 'a',
+  b: 'b',
+  c: 'c',
+  length: 3,
+  [Symbol.iterator]: Array.prototype[Symbol.iterator]
+};
+for (let item of iterable) {
+  console.log(item); // undefined, undefined, undefined
 }
 ```
 
@@ -322,7 +352,7 @@ yield*后面跟的是一个可遍历的结构，它会调用该结构的遍历�
 ```javascript
 let generator = function* () {
   yield 1;
-  yield* [2,3,4]; //use an iterable, is looped, and added as yields
+  yield* [2,3,4];
   yield 5;
 };
 
@@ -425,9 +455,37 @@ for (let x of obj) {
 
 ## 遍历器对象的return()，throw()
 
-遍历器对象除了具有`next`方法，还可以具有`return`方法和`throw`方法。如果你自己写遍历器生成函数，那么`next`方法是必须部署的，`return`方法和`throw`方法是否部署是可选的。
+遍历器对象除了具有`next`方法，还可以具有`return`方法和`throw`方法。如果你自己写遍历器对象生成函数，那么`next`方法是必须部署的，`return`方法和`throw`方法是否部署是可选的。
 
 `return`方法的使用场合是，如果`for...of`循环提前退出（通常是因为出错，或者有`break`语句或`continue`语句），就会调用`return`方法。如果一个对象在完成遍历前，需要清理或释放资源，就可以部署`return`方法。
+
+```javascript
+function readLinesSync(file) {
+  return {
+    next() {
+      if (file.isAtEndOfFile()) {
+        file.close();
+        return { done: true };
+      }
+    },
+    return() {
+      file.close();
+      return { done: true };
+    },
+  };
+}
+```
+
+上面代码中，函数`readLinesSync`接受一个文件对象作为参数，返回一个遍历器对象，其中除了`next`方法，还部署了`return`方法。下面，我们让文件的遍历提前返回，这样就会触发执行`return`方法。
+
+```javascript
+for (let line of readLinesSync(fileName)) {
+  console.log(x);
+  break;
+}
+```
+
+注意，`return`方法必须返回一个对象，这是Generator规格决定的。
 
 `throw`方法主要是配合Generator函数使用，一般的遍历器对象用不到这个方法。请参阅《Generator函数》一章。
 
@@ -467,28 +525,45 @@ arr.forEach(function (element, index) {
 });
 ```
 
-JavaScript原有的`for...in`循环，只能获得对象的键名，不能直接获取键值。ES6提供for...of循环，允许遍历获得键值。
+JavaScript原有的`for...in`循环，只能获得对象的键名，不能直接获取键值。ES6提供`for...of`循环，允许遍历获得键值。
 
 ```javascript
-var arr = ["a", "b", "c", "d"];
+var arr = ['a', 'b', 'c', 'd'];
 
-for (a in arr) {
+for (let a in arr) {
   console.log(a); // 0 1 2 3
 }
 
-for (a of arr) {
+for (let a of arr) {
   console.log(a); // a b c d
 }
 ```
 
 上面代码表明，`for...in`循环读取键名，`for...of`循环读取键值。如果要通过`for...of`循环，获取数组的索引，可以借助数组实例的`entries`方法和`keys`方法，参见《数组的扩展》章节。
 
+`for...of`循环调用遍历器接口，数组的遍历器接口只返回具有数字索引的属性。这一点跟`for...in`循环也不一样。
+
+```javascript
+let arr = [3, 5, 7];
+arr.foo = 'hello';
+
+for (let i in arr) {
+  console.log(i); // "0", "1", "2", "foo"
+}
+
+for (let i of arr) {
+  console.log(i); //  "3", "5", "7"
+}
+```
+
+上面代码中，`for...of`循环不会返回数组`arr`的`foo`属性。
+
 ### Set和Map结构
 
 Set和Map结构也原生具有Iterator接口，可以直接使用`for...of`循环。
 
 ```javascript
-var engines = Set(["Gecko", "Trident", "Webkit", "Webkit"]);
+var engines = new Set(["Gecko", "Trident", "Webkit", "Webkit"]);
 for (var e of engines) {
   console.log(e);
 }
@@ -689,11 +764,9 @@ for (var index in myArray) {
 
 for...in循环有几个缺点。
 
-1）数组的键名是数字，但是for...in循环是以字符串作为键名“0”、“1”、“2”等等。
-
-2）for...in循环不仅遍历数字键名，还会遍历手动添加的其他键，甚至包括原型链上的键。
-
-3）某些情况下，for...in循环会以任意顺序遍历键名。
+- 数组的键名是数字，但是for...in循环是以字符串作为键名“0”、“1”、“2”等等。
+- for...in循环不仅遍历数字键名，还会遍历手动添加的其他键，甚至包括原型链上的键。
+- 某些情况下，for...in循环会以任意顺序遍历键名。
 
 总之，`for...in`循环主要是为遍历对象而设计的，不适用于遍历数组。
 

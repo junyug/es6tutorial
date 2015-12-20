@@ -212,17 +212,23 @@ set = new Set([...set].filter(x => (x % 2) == 0));
 // 返回Set结构：{2, 4}
 ```
 
-因此使用Set，可以很容易地实现并集（Union）和交集（Intersect）。
+因此使用Set，可以很容易地实现并集（Union）、交集（Intersect）和差集（Difference）。
 
 ```javascript
 let a = new Set([1, 2, 3]);
 let b = new Set([4, 3, 2]);
 
+// 并集
 let union = new Set([...a, ...b]);
 // [1, 2, 3, 4]
 
+// 交集
 let intersect = new Set([...a].filter(x => b.has(x)));
 // [2, 3]
+
+// 差集
+let difference = new Set([...a].filter(x => !b.has(x)));
+// [1]
 ```
 
 Set结构的实例的forEach方法，用于对每个成员执行某种操作，没有返回值。
@@ -321,7 +327,7 @@ ws.forEach(function(item){ console.log('WeakSet has ' + item)})
 
 上面代码试图获取size和forEach属性，结果都不能成功。
 
-WeakSet不能遍历，是因为成员都是弱引用，随时可能消失，遍历机制无法保存成员的存在，很可能刚刚遍历结束，成员就取不到了。WeakSet的一个用处，是储存DOM节点，而不用担心这些节点从文档移除时，会引发内存泄漏。
+WeakSet不能遍历，是因为成员都是弱引用，随时可能消失，遍历机制无法保证成员的存在，很可能刚刚遍历结束，成员就取不到了。WeakSet的一个用处，是储存DOM节点，而不用担心这些节点从文档移除时，会引发内存泄漏。
 
 下面是WeakMap的另一个例子。
 
@@ -385,7 +391,7 @@ map.has("title") // true
 map.get("title") // "Author"
 ```
 
-上面代码在新建Map实例时，就指定了两个键name和title。
+上面代码在新建Map实例时，就指定了两个键`name`和`title`。
 
 Map构造函数接受数组作为参数，实际上执行的是下面的算法。
 
@@ -402,14 +408,17 @@ items.forEach(([key, value]) => map.set(key, value));
 
 ```javascript
 let map = new Map();
-map.set(1, 'aaa');
-map.set(1, 'bbb');
+
+map
+.set(1, 'aaa')
+.set(1, 'bbb');
+
 map.get(1) // "bbb"
 ```
 
-上面代码对键1连续赋值两次，后一次的值覆盖前一次的值。
+上面代码对键`1`连续赋值两次，后一次的值覆盖前一次的值。
 
-如果读取一个未知的键，则返回undefined。
+如果读取一个未知的键，则返回`undefined`。
 
 ```javascript
 new Map().get('asfddfsasadf')
@@ -425,7 +434,7 @@ map.set(['a'], 555);
 map.get(['a']) // undefined
 ```
 
-上面代码的set和get方法，表面是针对同一个键，但实际上这是两个值，内存地址是不一样的，因此get方法无法读取该键，返回undefined。
+上面代码的`set`和`get`方法，表面是针对同一个键，但实际上这是两个值，内存地址是不一样的，因此`get`方法无法读取该键，返回`undefined`。
 
 同理，同样的值的两个实例，在Map结构中被视为两个键。
 
@@ -435,14 +444,15 @@ var map = new Map();
 var k1 = ['a'];
 var k2 = ['a'];
 
-map.set(k1, 111);
-map.set(k2, 222);
+map
+.set(k1, 111)
+.set(k2, 222);
 
 map.get(k1) // 111
 map.get(k2) // 222
 ```
 
-上面代码中，变量k1和k2的值是一样的，但是它们在Map结构中被视为两个键。
+上面代码中，变量`k1`和`k2`的值是一样的，但是它们在Map结构中被视为两个键。
 
 由上可知，Map的键实际上是跟内存地址绑定的，只要内存地址不一样，就视为两个键。这就解决了同名属性碰撞（clash）的问题，我们扩展别人的库的时候，如果使用对象作为键名，就不用担心自己的属性与原作者的属性同名。
 
@@ -785,7 +795,7 @@ map.set(Symbol(), 2)
 // TypeError: Invalid value used as weak map key
 ```
 
-上面代码中，如果将1和`Symbol`作为WeakMap的键名，都会报错。
+上面代码中，如果将`1`和`Symbol`作为WeakMap的键名，都会报错。
 
 `WeakMap`的设计目的在于，键名是对象的弱引用（垃圾回收机制不将该引用考虑在内），所以其所对应的对象可能会被自动回收。当对象被回收后，`WeakMap`自动移除对应的键值对。典型应用是，一个对应DOM元素的`WeakMap`结构，当某个DOM元素被清除，其所对应的`WeakMap`记录就会自动被移除。基本上，`WeakMap`的专用场合就是，它的键所对应的对象，可能会在将来消失。`WeakMap`结构有助于防止内存泄漏。
 
@@ -832,7 +842,7 @@ myElement.addEventListener('click', function() {
 }, false);
 ```
 
-上面代码中，myElement是一个DOM节点，每当发生click事件，就更新一下状态。我们将这个状态作为键值放在WeakMap里，对应的键名就是myElement。一旦这个DOM节点删除，该状态就会自动消失，不存在内存泄漏风险。
+上面代码中，`myElement`是一个DOM节点，每当发生click事件，就更新一下状态。我们将这个状态作为键值放在WeakMap里，对应的键名就是`myElement`。一旦这个DOM节点删除，该状态就会自动消失，不存在内存泄漏风险。
 
 WeakMap的另一个用处是部署私有属性。
 
@@ -863,4 +873,4 @@ c.dec()
 // DONE
 ```
 
-上面代码中，Countdown类的两个内部属性_counter和_action，是实例的弱引用，所以如果删除实例，它们也就随之消失，不会造成内存泄漏。
+上面代码中，Countdown类的两个内部属性`_counter`和`_action`，是实例的弱引用，所以如果删除实例，它们也就随之消失，不会造成内存泄漏。

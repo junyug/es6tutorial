@@ -31,7 +31,7 @@ class Point {
   }
 
   toString() {
-    return '('+this.x+', '+this.y+')';
+    return '(' + this.x + ', ' + this.y + ')';
   }
 
 }
@@ -49,9 +49,10 @@ class Point{
 }
 
 typeof Point // "function"
+Point === Point.prototype.constructor // true
 ```
 
-上面代码表明，类的数据类型就是函数。
+上面代码表明，类的数据类型就是函数，类本身就指向构造函数。
 
 构造函数的prototype属性，在ES6的“类”上面继续存在。事实上，类的所有方法都定义在类的prototype属性上面。
 
@@ -88,9 +89,9 @@ let b = new B();
 b.constructor === B.prototype.constructor // true
 ```
 
-上面代码中，b是B类的实例，它的constructor方法就是B类原型的constructor方法。
+上面代码中，`b`是B类的实例，它的`constructor`方法就是B类原型的`constructor`方法。
 
-由于类的方法（除constructor以外）都定义在prototype对象上面，所以类的新方法可以添加在prototype对象上面。`Object.assign`方法可以很方便地一次向类添加多个方法。
+由于类的方法（除`constructor`以外）都定义在`prototype`对象上面，所以类的新方法可以添加在`prototype`对象上面。`Object.assign`方法可以很方便地一次向类添加多个方法。
 
 ```javascript
 class Point {
@@ -282,7 +283,7 @@ const MyClass = class Me {
 };
 ```
 
-上面代码使用表达式定义了一个类。需要注意的是，这个类的名字是MyClass而不是Me，Me只在Class的内部代码可用，指代当前类。
+上面代码使用表达式定义了一个类。需要注意的是，这个类的名字是MyClass而不是`Me`，`Me`只在Class的内部代码可用，指代当前类。
 
 ```javascript
 let inst = new MyClass();
@@ -290,7 +291,7 @@ inst.getClassName() // Me
 Me.name // ReferenceError: Me is not defined
 ```
 
-上面代码表示，Me只在Class内部有定义。
+上面代码表示，`Me`只在Class内部有定义。
 
 如果Class内部没用到的话，可以省略Me，也就是可以写成下面的形式。
 
@@ -347,7 +348,7 @@ class Foo {}
 
 ### 基本用法
 
-Class之间可以通过extends关键字实现继承，这比ES5的通过修改原型链实现继承，要清晰和方便很多。
+Class之间可以通过`extends`关键字实现继承，这比ES5的通过修改原型链实现继承，要清晰和方便很多。
 
 ```javascript
 class ColorPoint extends Point {}
@@ -397,7 +398,7 @@ constructor(...args) {
 }
 ```
 
-另一个需要注意的地方是，在子类的构造函数中，只有调用super之后，才可以使用this关键字，否则会报错。这是因为子类实例的构建，是基于对父类实例加工，只有super方法才能返回父类实例。
+另一个需要注意的地方是，在子类的构造函数中，只有调用super之后，才可以使用`this`关键字，否则会报错。这是因为子类实例的构建，是基于对父类实例加工，只有super方法才能返回父类实例。
 
 ```javascript
 class Point {
@@ -532,7 +533,7 @@ A.prototype.__proto__ === Object.prototype // true
 
 这种情况下，A作为一个基类（即不存在任何继承），就是一个普通函数，所以直接继承`Funciton.prototype`。但是，A调用后返回一个空对象（即Object实例），所以`A.prototype.__proto__`指向构造函数（Object）的prototype属性。
 
-第三种特殊情况，子类继承null。
+第三种特殊情况，子类继承`null`。
 
 ```javascript
 class A extends null {
@@ -598,7 +599,7 @@ obj.toString(); // MyObject: [object Object]
 var p1 = new Point(2, 3);
 var p2 = new ColorPoint(2, 3, 'red');
 
-p2.__proto__ === p1.__proto // false
+p2.__proto__ === p1.__proto__ // false
 p2.__proto__.__proto__ === p1.__proto__ // true
 ```
 
@@ -618,7 +619,19 @@ p1.printName() // "Ha"
 
 ## 原生构造函数的继承
 
-原生构造函数是指语言内置的构造函数，通常用来生成数据结构，比如`Array()`。以前，这些原生构造函数是无法继承的，即不能自己定义一个Array的子类。
+原生构造函数是指语言内置的构造函数，通常用来生成数据结构。ECMAScript的原生构造函数大致有下面这些。
+
+- Boolean()
+- Number()
+- String()
+- Array()
+- Date()
+- Function()
+- RegExp()
+- Error()
+- Object()
+
+以前，这些原生构造函数是无法继承的，比如，不能自己定义一个Array的子类。
 
 ```javascript
 function MyArray() {
@@ -635,7 +648,7 @@ MyArray.prototype = Object.create(Array.prototype, {
 });
 ```
 
-上面代码定义了一个继承Array的MyArray类。但是，这个类的行为与Array完全不一致。
+上面代码定义了一个继承Array的`MyArray`类。但是，这个类的行为与Array完全不一致。
 
 ```javascript
 var colors = new MyArray();
@@ -646,9 +659,9 @@ colors.length = 0;
 colors[0]  // "red"
 ```
 
-之所以会发生这种情况，是因为原生构造函数无法外部获取，通过`Array.apply()`或者分配给原型对象都不行。ES5是先新建子类的实例对象this，再将父类的属性添加到子类上，由于父类的属性无法获取，导致无法继承原生的构造函数。
+之所以会发生这种情况，是因为子类无法获得原生构造函数的内部属性，通过`Array.apply()`或者分配给原型对象都不行。ES5是先新建子类的实例对象`this`，再将父类的属性添加到子类上，由于父类的内部属性无法获取，导致无法继承原生的构造函数。比如，Array构造函数有一个内部属性`[[DefineOwnProperty]]`，用来定义新属性时，更新`length`属性，这个内部属性无法在子类获取，导致子类的`length`属性行为不正常。
 
-ES6允许继承原生构造函数定义子类，因为ES6是先新建父类的实例对象this，然后再用子类的构造函数修饰this，使得父类的所有行为都可以继承。下面是一个继承Array的例子。
+ES6允许继承原生构造函数定义子类，因为ES6是先新建父类的实例对象`this`，然后再用子类的构造函数修饰`this`，使得父类的所有行为都可以继承。下面是一个继承Array的例子。
 
 ```javascript
 class MyArray extends Array {
@@ -667,7 +680,7 @@ arr[0] // undefined
 
 上面代码定义了一个MyArray类，继承了Array构造函数，因此就可以从MyArray生成数组的实例。这意味着，ES6可以自定义原生数据结构（比如Array、String等）的子类，这是ES5无法做到的。
 
-上面这个例子也说明，extends关键字不仅可以用来继承类，还可以用来继承原生的构造函数。因此可以在原生数据结构的基础上，定义自己的数据结构。下面就是定义了一个带版本功能的数组。
+上面这个例子也说明，`extends`关键字不仅可以用来继承类，还可以用来继承原生的构造函数。因此可以在原生数据结构的基础上，定义自己的数据结构。下面就是定义了一个带版本功能的数组。
 
 ```javascript
 class VersionedArray extends Array {
@@ -679,14 +692,29 @@ class VersionedArray extends Array {
     this.history.push(this.slice());
   }
   revert() {
-    this.splice(0, this.length, this.history[this.history.length - 1]);
+    this.splice(0, this.length, ...this.history[this.history.length - 1]);
   }
 }
+
+var x = new VersionedArray();
+
+x.push(1);
+x.push(2);
+x // [1, 2]
+x.history // [[]]
+
+x.commit();
+x.history // [[], [1, 2]]
+x.push(3);
+x // [1, 2, 3]
+
+x.revert();
+x // [1, 2]
 ```
 
-上面代码中，VersionedArray结构会通过commit方法，将自己的上一个版本存入history属性，然后通过revert方法，可以撤销当前版本，回到上一个版本。除此之外，VersionedArray依然是一个数组，所有原生的数组方法都可以在它上面调用。
+上面代码中，`VersionedArray`结构会通过`commit`方法，将自己的当前状态存入`history`属性，然后通过`revert`方法，可以撤销当前版本，回到上一个版本。除此之外，`VersionedArray`依然是一个数组，所有原生的数组方法都可以在它上面调用。
 
-下面是一个自定义Error子类的例子。
+下面是一个自定义`Error`子类的例子。
 
 ```javascript
 class ExtendableError extends Error {
@@ -714,7 +742,7 @@ myerror.stack
 //     ...
 ```
 
-## class的取值函数（getter）和存值函数（setter）
+## Class的取值函数（getter）和存值函数（setter）
 
 与ES5一样，在Class内部可以使用get和set关键字，对某个属性设置存值函数和取值函数，拦截该属性的存取行为。
 
@@ -740,7 +768,7 @@ inst.prop
 // 'getter'
 ```
 
-上面代码中，prop属性有对应的存值函数和取值函数，因此赋值和读取行为都被自定义了。
+上面代码中，`prop`属性有对应的存值函数和取值函数，因此赋值和读取行为都被自定义了。
 
 存值函数和取值函数是设置在属性的descriptor对象上的。
 
@@ -765,27 +793,7 @@ var descriptor = Object.getOwnPropertyDescriptor(
 "set" in descriptor  // true
 ```
 
-上面代码中，存值函数和取值函数是定义在html属性的描述对象上面，这与ES5完全一致。
-
-下面的例子针对所有属性，设置存值函数和取值函数。
-
-```javascript
-class Jedi {
-  constructor(options = {}) {
-    // ...
-  }
-
-  set(key, val) {
-    this[key] = val;
-  }
-
-  get(key) {
-    return this[key];
-  }
-}
-```
-
-上面代码中，Jedi实例所有属性的存取，都会通过存值函数和取值函数。
+上面代码中，存值函数和取值函数是定义在`html`属性的描述对象上面，这与ES5完全一致。
 
 ## Class的Generator方法
 
@@ -871,7 +879,17 @@ Bar.classMethod();
 
 静态属性指的是Class本身的属性，即`Class.propname`，而不是定义在实例对象（`this`）上的属性。
 
-ES6明确规定，类只有静态方法，没有静态属性，即像`Class.propname`这样的用法不存在。
+```javascript
+class Foo {
+}
+
+Foo.prop = 1;
+Foo.prop // 1
+```
+
+上面的写法可以读写`Foo`类的静态属性`prop`。
+
+目前，只有这种写法可行，因为ES6明确规定，Class内部只有静态方法，没有静态属性。
 
 ```javascript
 // 以下两种写法都无效，

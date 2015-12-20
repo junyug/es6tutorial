@@ -2,6 +2,8 @@
 
 ## 函数参数的默认值
 
+### 基本用法
+
 在ES6之前，不能直接为函数的参数指定默认值，只能采用变通的方法。
 
 ```javascript
@@ -15,7 +17,7 @@ log('Hello', 'China') // Hello China
 log('Hello', '') // Hello World
 ```
 
-上面代码检查函数log的参数y有没有赋值，如果没有，则指定默认值为World。这种写法的缺点在于，如果参数y赋值了，但是对应的布尔值为false，则该赋值不起作用。就像上面代码的最后一行，参数y等于空字符，结果被改为默认值。
+上面代码检查函数`log`的参数`y`有没有赋值，如果没有，则指定默认值为`World`。这种写法的缺点在于，如果参数`y`赋值了，但是对应的布尔值为`false`，则该赋值不起作用。就像上面代码的最后一行，参数`y`等于空字符，结果被改为默认值。
 
 为了避免这个问题，通常需要先判断一下参数y是否被赋值，如果没有，再等于默认值。这有两种写法。
 
@@ -52,44 +54,134 @@ function Point(x = 0, y = 0) {
 }
 
 var p = new Point();
-// p = { x:0, y:0 }
+p // { x: 0, y: 0 }
 ```
 
-除了简洁，ES6的写法还有两个好处：首先，阅读代码的人，可以立刻意识到哪些参数是可以省略的，不用查看函数体或文档；其次，有利于将来的代码优化，即使未来的版本彻底拿到这个参数，也不会导致以前的代码无法运行。
+除了简洁，ES6的写法还有两个好处：首先，阅读代码的人，可以立刻意识到哪些参数是可以省略的，不用查看函数体或文档；其次，有利于将来的代码优化，即使未来的版本彻底拿掉这个参数，也不会导致以前的代码无法运行。
 
-默认值的写法非常灵活，下面是一个为对象属性设置默认值的例子。
+参数变量是默认声明的，所以不能用let或const再次声明。
 
 ```javascript
-fetch(url, { body = '', method = 'GET', headers = {} }){
+function foo(x = 5) {
+  let x = 1; // error
+  const x = 2; // error
+}
+```
+
+上面代码中，参数变量`x`是默认声明的，在函数体中，不能用let或const再次声明，否则会报错。
+
+### 与解构赋值默认值结合使用
+
+参数默认值可以与解构赋值的默认值，结合起来使用。
+
+```javascript
+function foo({x, y = 5}) {
+  console.log(x, y);
+}
+
+foo({}) // undefined, 5
+foo({x: 1}) // 1, 5
+foo({x: 1, y: 2}) // 1, 2
+foo() // TypeError: Cannot read property 'x' of undefined
+```
+
+上面代码使用了对象的解构赋值默认值，而没有使用函数参数的默认值。只有当函数`foo`的参数是一个对象时，变量`x`和`y`才会通过解构赋值而生成。如果函数`foo`调用时参数不是对象，变量`x`和`y`就不会生成，从而报错。如果参数对象没有`y`属性，`y`的默认值5才会生效。
+
+下面是另一个对象的解构赋值默认值的例子。
+
+```javascript
+function fetch(url, { body = '', method = 'GET', headers = {} }){
   console.log(method);
 }
+
+fetch('http://example.com', {})
+// "GET"
+
+fetch('http://example.com')
+// 报错
 ```
 
-上面代码中，传入函数fetch的第二个参数是一个对象，调用的时候可以为它的三个属性设置默认值。
+上面代码中，如果函数`fetch`的第二个参数是一个对象，就可以为它的三个属性设置默认值。
 
-甚至还可以设置双重默认值。
+上面的写法不能省略第二个参数，如果结合函数参数的默认值，就可以省略第二个参数。这时，就出现了双重默认值。
 
 ```javascript
-fetch(url, { method = 'GET' } = {}){
+function fetch(url, { method = 'GET' } = {}){
   console.log(method);
 }
+
+fetch('http://example.com')
+// "GET"
 ```
 
-上面代码中，调用函数fetch时，如果不含第二个参数，则默认值为一个空对象；如果包含第二个参数，则它的method属性默认值为GET。
+上面代码中，函数`fetch`没有第二个参数时，函数参数的默认值就会生效，然后才是解构赋值的默认值生效，变量`method`才会取到默认值`GET`。
 
-定义了默认值的参数，必须是函数的尾部参数，其后不能再有其他无默认值的参数。这是因为有了默认值以后，该参数可以省略，只有位于尾部，才可能判断出到底省略了哪些参数。
+再请问下面两种写法有什么差别？
 
 ```javascript
-// 以下两种写法都是错的
-
-function f(x = 5, y) {
+// 写法一
+function m1({x = 0, y = 0} = {}) {
+  return [x, y];
 }
 
+// 写法二
+function m2({x, y} = { x: 0, y: 0 }) {
+  return [x, y];
+}
+```
+
+上面两种写法都对函数的参数设定了默认值，区别是写法一函数参数的默认值是空对象，但是设置了对象解构赋值的默认值；写法二函数参数的默认值是一个有具体属性的函数，但是没有设置对象解构赋值的默认值。
+
+```javascript
+// 函数没有参数的情况
+m1() // [0, 0]
+m2() // [0, 0]
+
+// x和y都有值的情况
+m1({x: 3, y: 8}) // [3, 8]
+m2({x: 3, y: 8}) // [3, 8]
+
+// x有值，y无值的情况
+m1({x: 3}) // [3, 0]
+m2({x: 3}) // [3, undefined]
+
+// x和y都无值的情况
+m1({}) // [0, 0];
+m2({}) // [undefined, undefined]
+
+m1({z: 3}) // [0, 0]
+m2({z: 3}) // [undefined, undefined]
+```
+
+### 参数默认值的位置
+
+通常情况下，定义了默认值的参数，应该是函数的尾参数。因为这样比较容易看出来，到底省略了哪些参数。如果非尾部的参数设置默认值，实际上这个参数是没法省略的。
+
+```javascript
+// 例一
+function f(x = 1, y) {
+  return [x, y];
+}
+
+f() // [1, undefined]
+f(2) // [2, undefined])
+f(, 1) // 报错
+f(undefined, 1) // [1, 1]
+
+// 例二
 function f(x, y = 5, z) {
+  return [x, y, z];
 }
+
+f() // [undefined, 5, undefined]
+f(1) // [1, 5, undefined]
+f(1, ,2) // 报错
+f(1, undefined, 2) // [1, 5, 2]
 ```
 
-如果传入undefined，将触发该参数等于默认值，null则没有这个效果。
+上面代码中，有默认值的参数都不是尾参数。这时，无法只省略该参数，而不省略它后面的参数，除非显式输入`undefined`。
+
+如果传入`undefined`，将触发该参数等于默认值，`null`则没有这个效果。
 
 ```javascript
 function foo(x = 5, y = 6){
@@ -100,9 +192,11 @@ foo(undefined, null)
 // 5 null
 ```
 
-上面代码中，x参数对应undefined，结果触发了默认值，y参数等于null，就没有触发默认值。
+上面代码中，`x`参数对应`undefined`，结果触发了默认值，`y`参数等于`null`，就没有触发默认值。
 
-指定了默认值以后，函数的length属性，将返回没有指定默认值的参数个数。也就是说，指定了默认值后，length属性将失真。
+### 函数的length属性
+
+指定了默认值以后，函数的`length`属性，将返回没有指定默认值的参数个数。也就是说，指定了默认值后，`length`属性将失真。
 
 ```javascript
 (function(a){}).length // 1
@@ -110,7 +204,95 @@ foo(undefined, null)
 (function(a, b, c = 5){}).length // 2
 ```
 
-上面代码中，length属性的返回值，等于函数的参数个数减去指定了默认值的参数个数。
+上面代码中，`length`属性的返回值，等于函数的参数个数减去指定了默认值的参数个数。比如，上面最后一个函数，定义了3个参数，其中有一个参数`c`指定了默认值，因此`length`属性等于3减去1，最后得到2。
+
+这是因为`length`属性的含义是，该函数预期传入的参数个数。某个参数指定默认值以后，预期传入的参数个数就不包括这个参数了。同理，rest参数也不会计入`length`属性。
+
+```javascript
+(function(...args) {}).length // 0
+```
+
+### 作用域
+
+一个需要注意的地方是，如果参数默认值是一个变量，则该变量所处的作用域，与其他变量的作用域规则是一样的，即先是当前函数的作用域，然后才是全局作用域。
+
+```javascript
+var x = 1;
+
+function f(x, y = x) {
+  console.log(y);
+}
+
+f(2) // 2
+```
+
+上面代码中，参数`y`的默认值等于`x`。调用时，由于函数作用域内部的变量`x`已经生成，所以`y`等于参数`x`，而不是全局变量`x`。
+
+如果调用时，函数作用域内部的变量`x`没有生成，结果就会不一样。
+
+```javascript
+let x = 1;
+
+function f(y = x) {
+  let x = 2;
+  console.log(y);
+}
+
+f() // 1
+```
+
+上面代码中，函数调用时，`y`的默认值变量`x`尚未在函数内部生成，所以`x`指向全局变量，结果又不一样。
+
+如果此时，全局变量`x`不存在，就会报错。
+
+```javascript
+function f(y = x) {
+  let x = 2;
+  console.log(y);
+}
+
+f() // ReferenceError: x is not defined
+```
+
+如果函数`A`的参数默认值是函数`B`，由于函数的作用域是其声明时所在的作用域，那么函数`B`的作用域不是函数`A`，而是全局作用域。请看下面的例子。
+
+```javascript
+let foo = 'outer';
+
+function bar(func = x => foo) {
+  let foo = 'inner';
+  console.log(func()); // outer
+}
+
+bar();
+```
+
+上面代码中，函数`bar`的参数`func`，默认是一个匿名函数，返回值为变量`foo`。这个匿名函数的作用域就不是`bar`。这个匿名函数声明时，是处在外层作用域，所以内部的`foo`指向函数体外的声明，输出`outer`。它实际上等同于下面的代码。
+
+```javascript
+let foo = 'outer';
+let f = x => foo;
+
+function bar(func = f) {
+  let foo = 'inner';
+  console.log(func()); // outer
+}
+
+bar();
+```
+
+如果写成下面这样，就会报错。
+
+```javascript
+function bar(func = () => foo) {
+  let foo = 'inner';
+  console.log(func());
+}
+
+bar() // ReferenceError: foo is not defined
+```
+
+### 应用
 
 利用参数默认值，可以指定某一个参数不得省略，如果省略就抛出一个错误。
 
@@ -127,48 +309,15 @@ foo()
 // Error: Missing parameter
 ```
 
-上面代码的foo函数，如果调用的时候没有参数，就会调用默认值throwIfMissing函数，从而抛出一个错误。
+上面代码的`foo`函数，如果调用的时候没有参数，就会调用默认值`throwIfMissing`函数，从而抛出一个错误。
 
-从上面代码还可以看到，参数mustBeProvided的默认值等于throwIfMissing函数的运行结果（即函数名之后有一对圆括号），这表明参数的默认值不是在定义时执行，而是在运行时执行（即如果参数已经赋值，默认值中的函数就不会运行），这与python语言不一样。
+从上面代码还可以看到，参数`mustBeProvided`的默认值等于`throwIfMissing`函数的运行结果（即函数名之后有一对圆括号），这表明参数的默认值不是在定义时执行，而是在运行时执行（即如果参数已经赋值，默认值中的函数就不会运行），这与python语言不一样。
 
-另一个需要注意的地方是，参数默认值所处的作用域，不是全局作用域，而是函数作用域。
-
-```javascript
-var x = 1;
-
-function foo(x, y = x) {
-  console.log(y);
-}
-
-foo(2) // 2
-```
-
-上面代码中，参数y的默认值等于x，由于处在函数作用域，所以y等于参数x，而不是全局变量x。
-
-参数变量是默认声明的，所以不能用let或const再次声明。
+另外，可以将参数默认值设为`undefined`，表明这个参数是可以省略的。
 
 ```javascript
-function foo(x = 5) {
-  let x = 1; // error
-  const x = 2; // error
-}
+function foo(optional = undefined) { ··· }
 ```
-
-上面代码中，参数变量x是默认声明的，在函数体中，不能用let或const再次声明，否则会报错。
-
-参数默认值可以与解构赋值，联合起来使用。
-
-```javascript
-function foo({x, y = 5}) {
-  console.log(x, y);
-}
-
-foo({}) // undefined, 5
-foo({x: 1}) // 1, 5
-foo({x: 1, y: 2}) // 1, 2
-```
-
-上面代码中，foo函数的参数是一个对象，变量x和y用于解构赋值，y有默认值5。
 
 ## rest参数
 
@@ -236,6 +385,8 @@ function f(a, ...b, c) {
 
 ## 扩展运算符
 
+### 含义
+
 扩展运算符（spread）是三个点（...）。它好比rest参数的逆运算，将一个数组转为用逗号分隔的参数序列。
 
 ```javascript
@@ -246,7 +397,7 @@ console.log(1, ...[2, 3, 4], 5)
 // 1 2 3 4 5
 
 [...document.querySelectorAll('div')]
-// <- [<div>, <div>, <div>]
+// [<div>, <div>, <div>]
 ```
 
 该运算符主要用于函数调用。
@@ -266,16 +417,26 @@ add(...numbers) // 42
 
 上面代码中，`array.push(...items)`和`add(...numbers)`这两行，都是函数的调用，它们的都使用了扩展运算符。该运算符将一个数组，变为参数序列。
 
-由于扩展运算符可以展开数组，所以不再需要apply方法，将数组转为函数的参数了。
+扩展运算符与正常的函数参数可以结合使用，非常灵活。
+
+```javascript
+function f(v, w, x, y, z) { }
+var args = [0, 1];
+f(-1, ...args, 2, ...[3]);
+```
+
+### 替代数组的apply方法
+
+由于扩展运算符可以展开数组，所以不再需要`apply`方法，将数组转为函数的参数了。
 
 ```javascript
 // ES5的写法
-function f (x, y, z){}
+function f(x, y, z) {}
 var args = [0, 1, 2];
 f.apply(null, args);
 
 // ES6的写法
-function f (x, y, z){}
+function f(x, y, z) {}
 var args = [0, 1, 2];
 f(...args);
 ```
@@ -311,15 +472,20 @@ arr1.push(...arr2);
 
 上面代码的ES5写法中，`push`方法的参数不能是数组，所以只好通过`apply`方法变通使用`push`方法。有了扩展运算符，就可以直接将数组传入`push`方法。
 
-扩展运算符与正常的函数参数可以结合使用，非常灵活。
+下面是另外一个例子。
 
 ```javascript
-function f(v, w, x, y, z) { }
-var args = [0, 1];
-f(-1, ...args, 2, ...[3]);
+// ES5
+new (Date.bind.apply(Date, [null, 2015, 1, 1]))
+// ES6
+new Date(...[2015, 1, 1]);
 ```
 
-扩展运算符可以简化很多种ES5的写法。
+### 扩展运算符的应用
+
+**（1）合并数组**
+
+扩展运算符提供了数组合并的新写法。
 
 ```javascript
 // ES5
@@ -327,23 +493,31 @@ f(-1, ...args, 2, ...[3]);
 // ES6
 [1, 2, ...more]
 
-// ES5
-list.push.apply(list, [3, 4])
-// ES6
-list.push(...[3, 4])
+var arr1 = ['a', 'b'];
+var arr2 = ['c'];
+var arr3 = ['d', 'e'];
 
+// ES5的合并数组
+arr1.concat(arr2, arr3));
+// [ 'a', 'b', 'c', 'd', 'e' ]
+
+// ES6的合并数组
+[...arr1, ...arr2, ...arr3]
+// [ 'a', 'b', 'c', 'd', 'e' ]
+```
+
+**（2）与解构赋值结合**
+
+扩展运算符可以与解构赋值结合起来，用于生成数组。
+
+```javascript
 // ES5
 a = list[0], rest = list.slice(1)
 // ES6
 [a, ...rest] = list
-
-// ES5
-new (Date.bind.apply(Date, [null, 2015, 1, 1]))
-// ES6
-new Date(...[2015, 1, 1]);
 ```
 
-扩展运算符也可以与解构赋值结合起来，用于生成数组。
+下面是另外一些例子。
 
 ```javascript
 const [first, ...rest] = [1, 2, 3, 4, 5];
@@ -357,14 +531,6 @@ rest  // []:
 const [first, ...rest] = ["foo"];
 first  // "foo"
 rest   // []
-
-const [first, ...rest] = ["foo", "bar"];
-first // "foo"
-rest  // ["bar"]
-
-const [first, ...rest] = ["foo", "bar", "baz"];
-first // "foo"
-rest  // ["bar","baz"]
 ```
 
 如果将扩展运算符用于数组赋值，只能放在参数的最后一位，否则会报错。
@@ -377,6 +543,8 @@ const [first, ...middle, last] = [1, 2, 3, 4, 5];
 // 报错
 ```
 
+**（3）函数的返回值**
+
 JavaScript的函数只能返回一个值，如果需要返回多个值，只能返回数组或对象。扩展运算符提供了解决这个问题的一种变通方法。
 
 ```javascript
@@ -384,7 +552,9 @@ var dateFields = readDateFields(database);
 var d = new Date(...dateFields);
 ```
 
-上面代码从数据库取出一行数据，通过扩展运算符，直接将其传入构造函数Date。
+上面代码从数据库取出一行数据，通过扩展运算符，直接将其传入构造函数`Date`。
+
+**（4）字符串**
 
 扩展运算符还可以将字符串转为真正的数组。
 
@@ -392,6 +562,39 @@ var d = new Date(...dateFields);
 [..."hello"]
 // [ "h", "e", "l", "l", "o" ]
 ```
+
+上面的写法，有一个重要的好处，那就是能够正确识别32位的Unicode字符。
+
+```javascript
+'x\uD83D\uDE80y'.length // 4
+[...'x\uD83D\uDE80y'].length // 3
+```
+
+上面代码的第一种写法，JavaScript会将32位Unicode字符，识别为2个字符，采用扩展运算符就没有这个问题。因此，正确返回字符串长度的函数，可以像下面这样写。
+
+```javascript
+function length(str) {
+  return [...str].length;
+}
+
+length('x\uD83D\uDE80y') // 3
+```
+
+凡是涉及到操作32位Unicode字符的函数，都有这个问题。因此，最好都用扩展运算符改写。
+
+```javascript
+let str = 'x\uD83D\uDE80y';
+
+str.split('').reverse().join('')
+// 'y\uDE80\uD83Dx'
+
+[...str].reverse().join('')
+// 'y\uD83D\uDE80x'
+```
+
+上面代码中，如果不用扩展运算符，字符串的`reverse`操作就不正确。
+
+**（5）类似数组的对象**
 
 任何类似数组的对象，都可以用扩展运算符转为真正的数组。
 
@@ -401,6 +604,8 @@ var array = [...nodeList];
 ```
 
 上面代码中，`querySelectorAll`方法返回的是一个`nodeList`对象，扩展运算符可以将其转为真正的数组。
+
+**（6）Map和Set结构，Generator函数**
 
 扩展运算符内部调用的是数据结构的Iterator接口，因此只要具有Iterator接口的对象，都可以使用扩展运算符，比如Map结构。
 
@@ -427,6 +632,13 @@ var go = function*(){
 ```
 
 上面代码中，变量`go`是一个Generator函数，执行后返回的是一个遍历器对象，对这个遍历器对象执行扩展运算符，就会将内部遍历得到的值，转为一个数组。
+
+如果对没有`iterator`接口的对象，使用扩展运算符，将会报错。
+
+```javascript
+var obj = {a: 1, b: 2};
+let arr = [...obj]; // TypeError: Cannot spread non-iterable object
+```
 
 ## name属性
 
@@ -465,13 +677,19 @@ bar.name // "baz"
 bar.name // "baz"
 ```
 
-只有具名函数才有`name`这个属性，匿名函数是没有的。
+`Function`构造函数返回的函数实例，`name`属性的值为“anonymous”。
 
 ```javascript
-'name' in (function () {})
-// false
-'name' in (() => {})
-// false
+(new Function).name // "anonymous"
+```
+
+`bind`返回的函数，`name`属性值会加上“bound ”前缀。
+
+```javascript
+function foo() {};
+foo.bind({}).name // "bound foo"
+
+(function(){}).bind({}).name // "bound "
 ```
 
 ## 箭头函数
@@ -580,7 +798,7 @@ headAndTail(1, 2, 3, 4, 5)
 
 箭头函数有几个使用注意点。
 
-（1）函数体内的`this`对象，绑定定义时所在的对象，而不是使用时所在的对象。
+（1）函数体内的`this`对象，就是定义时所在的对象，而不是使用时所在的对象。
 
 （2）不可以当作构造函数，也就是说，不可以使用`new`命令，否则会抛出一个错误。
 
@@ -591,14 +809,19 @@ headAndTail(1, 2, 3, 4, 5)
 上面四点中，第一点尤其值得注意。`this`对象的指向是可变的，但是在箭头函数中，它是固定的。
 
 ```javascript
-[1, 2, 3].map(n => n * 2);
+function foo() {
+   setTimeout( () => {
+      console.log("id:", this.id);
+   },100);
+}
 
-// 等同于
-
-[1, 2, 3].map(function(n) { return n * 2; }, this);
+foo.call( { id: 42 } );
+// id: 42
 ```
 
-下面的代码是一个例子，将this对象绑定定义时所在的对象。
+上面代码中，`setTimeout`的参数是一个箭头函数，100毫秒后执行。如果是普通函数，执行时`this`应该指向全局对象，但是箭头函数导致`this`总是指向函数所在的对象。
+
+下面是另一个例子。
 
 ```javascript
 var handler = {
@@ -615,7 +838,7 @@ var handler = {
 };
 ```
 
-上面代码的`init`方法中，使用了箭头函数，这导致`this`绑定`handler`对象，否则回调函数运行时，`this.doSomething`这一行会报错，因为此时`this`指向全局对象。
+上面代码的`init`方法中，使用了箭头函数，这导致`this`总是指向`handler`对象。否则，回调函数运行时，`this.doSomething`这一行会报错，因为此时`this`指向全局对象。
 
 ```javascript
 function Timer () {
@@ -627,11 +850,58 @@ setTimeout(() => console.log(timer.seconds), 3100)
 // 3
 ```
 
-上面代码中，`Timer`函数内部的`setInterval`调用了`this.seconds`属性，通过箭头函数将`this`绑定在Timer的实例对象。否则，输出结果是0，而不是3。
+上面代码中，`Timer`函数内部的`setInterval`调用了`this.seconds`属性，通过箭头函数让`this`总是指向Timer的实例对象。否则，输出结果是0，而不是3。
 
-由于this在箭头函数中被绑定，所以不能用call()、apply()、bind()这些方法去改变this的指向。
+`this`指向的固定化，并不是因为箭头函数内部有绑定`this`的机制，实际原因是箭头函数根本没有自己的`this`，导致内部的`this`就是外层代码块的`this`。正是因为它没有`this`，所以也就不能用作构造函数。
 
-长期以来，JavaScript语言的this对象一直是一个令人头痛的问题，在对象方法中使用this，必须非常小心。箭头函数绑定this，很大程度上解决了这个困扰。
+请问下面的代码之中有几个`this`？
+
+```javascript
+function foo() {
+   return () => {
+      return () => {
+         return () => {
+            console.log("id:", this.id);
+         };
+      };
+   };
+}
+
+foo.call( { id: 42 } )()()();
+// id: 42
+```
+
+上面代码之中，只有一个`this`，就是函数`foo`的`this`。因为所有的内层函数都是箭头函数，都没有自己的`this`，所以它们的`this`其实都是最外层`foo`函数的`this`。
+
+除了`this`，以下三个变量在箭头函数之中也是不存在的，指向外层函数的对应变量：`arguments`、`super`、`new.target`。
+
+```javascript
+function foo() {
+   setTimeout( () => {
+      console.log("args:", arguments);
+   },100);
+}
+
+foo( 2, 4, 6, 8 );
+// args: [2, 4, 6, 8]
+```
+
+上面代码中，箭头函数内部的变量`arguments`，其实是函数`foo`的`arguments`变量。
+
+另外，由于箭头函数没有自己的`this`，所以当然也就不能用`call()`、`apply()`、`bind()`这些方法去改变`this`的指向。
+
+```javascript
+(function() {
+  return [
+    (() => this.x).bind({ x: 'inner' })()
+  ]
+}).call({ x: 'outer' });
+// ['outer']
+```
+
+上面代码中，箭头函数没有自己的`this`，所以`bind`方法无效，内部的`this`指向外部的`this`。
+
+长期以来，JavaScript语言的`this`对象一直是一个令人头痛的问题，在对象方法中使用`this`，必须非常小心。箭头函数”绑定”`this`，很大程度上解决了这个困扰。
 
 ### 嵌套的箭头函数
 
@@ -707,10 +977,10 @@ var fix = f => (x => f(v => x(x)(v)))
 ```javascript
 foo::bar;
 // 等同于
-bar.call(foo);
+bar.bind(foo);
 
 foo::bar(...arguments);
-i// 等同于
+// 等同于
 bar.apply(foo, arguments);
 
 const hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -880,7 +1150,16 @@ factorial(5, 1) // 120
 
 由此可见，“尾调用优化”对递归操作意义重大，所以一些函数式编程语言将其写入了语言规格。ES6也是如此，第一次明确规定，所有ECMAScript的实现，都必须部署“尾调用优化”。这就是说，在ES6中，只要使用尾递归，就不会发生栈溢出，相对节省内存。
 
-目前，只有开启严格模式，尾调用优化才会生效。
+注意，只有开启严格模式，尾调用优化才会生效。由于一旦启用尾调用优化，`func.arguments`和`func.caller`这两个函数内部对象就失去意义了，因为外层的帧会被整个替换掉，这两个对象包含的信息就会被移除。严格模式下，这两个对象也是不可用的。
+
+```javascript
+function restricted() {
+  "use strict";
+  restricted.caller;    // 报错
+  restricted.arguments; // 报错
+}
+restricted();
+```
 
 ### 递归函数的改写
 
@@ -906,7 +1185,6 @@ factorial(5) // 120
 函数式编程有一个概念，叫做柯里化（currying），意思是将多参数的函数转换成单参数的形式。这里也可以使用柯里化。
 
 ```javascript
-
 function currying(fn, n) {
   return function (m) {
     return fn.call(this, m, n);

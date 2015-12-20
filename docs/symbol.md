@@ -2,7 +2,7 @@
 
 ## 概述
 
-ES5的对象属性名都是字符串，这容易造成属性名的冲突。比如，你使用了一个他人提供的对象，但又想为这个对象添加新的方法，新方法的名字就有可能与现有方法产生冲突。如果有一种机制，保证每个属性的名字都是独一无二的就好了，这样就从根本上防止属性名的冲突。这就是ES6引入Symbol的原因。
+ES5的对象属性名都是字符串，这容易造成属性名的冲突。比如，你使用了一个他人提供的对象，但又想为这个对象添加新的方法（mixin模式），新方法的名字就有可能与现有方法产生冲突。如果有一种机制，保证每个属性的名字都是独一无二的就好了，这样就从根本上防止属性名的冲突。这就是ES6引入Symbol的原因。
 
 ES6引入了一种新的原始数据类型Symbol，表示独一无二的值。它是JavaScript语言的第七种数据类型，前六种是：Undefined、Null、布尔值（Boolean）、字符串（String）、数值（Number）、对象（Object）。
 
@@ -17,9 +17,9 @@ typeof s
 
 上面代码中，变量`s`就是一个独一无二的值。`typeof`运算符的结果，表明变量`s`是Symbol数据类型，而不是字符串之类的其他类型。
 
-注意，Symbol函数前不能使用`new`命令，否则会报错。这是因为生成的Symbol是一个原始类型的值，不是对象。也就是说，由于Symbol值不是对象，所以不能添加属性。基本上，它是一种类似于字符串的数据类型。
+注意，`Symbol`函数前不能使用`new`命令，否则会报错。这是因为生成的Symbol是一个原始类型的值，不是对象。也就是说，由于Symbol值不是对象，所以不能添加属性。基本上，它是一种类似于字符串的数据类型。
 
-Symbol函数可以接受一个字符串作为参数，表示对Symbol实例的描述，主要是为了在控制台显示，或者转为字符串时，比较容易区分。
+`Symbol`函数可以接受一个字符串作为参数，表示对Symbol实例的描述，主要是为了在控制台显示，或者转为字符串时，比较容易区分。
 
 ```javascript
 var s1 = Symbol('foo');
@@ -34,7 +34,7 @@ s2.toString() // "Symbol(bar)"
 
 上面代码中，`s1`和`s2`是两个Symbol值。如果不加参数，它们在控制台的输出都是`Symbol()`，不利于区分。有了参数以后，就等于为它们加上了描述，输出的时候就能够分清，到底是哪一个值。
 
-注意，Symbol函数的参数只是表示对当前Symbol值的描述，因此相同参数的Symbol函数的返回值是不相等的。
+注意，`Symbol`函数的参数只是表示对当前Symbol值的描述，因此相同参数的`Symbol`函数的返回值是不相等的。
 
 ```javascript
 // 没有参数的情况
@@ -50,7 +50,7 @@ var s2 = Symbol("foo");
 s1 === s2 // false
 ```
 
-上面代码中，`s1`和`s2`都是Symbol函数的返回值，而且参数相同，但是它们是不相等的。
+上面代码中，`s1`和`s2`都是`Symbol`函数的返回值，而且参数相同，但是它们是不相等的。
 
 Symbol值不能与其他类型的值进行运算，会报错。
 
@@ -63,13 +63,28 @@ var sym = Symbol('My symbol');
 // TypeError: can't convert symbol to string
 ```
 
-但是，Symbol值可以转为字符串。
+但是，Symbol值可以显式转为字符串。
 
 ```javascript
 var sym = Symbol('My symbol');
 
 String(sym) // 'Symbol(My symbol)'
 sym.toString() // 'Symbol(My symbol)'
+```
+
+另外，Symbol值也可以转为布尔值，但是不能转为数值。
+
+```javascript
+var sym = Symbol();
+Boolean(sym) // true
+!sym  // false
+
+if (sym) {
+  // ...
+}
+
+Number(sym) // TypeError
+sym + 2 // TypeError
 ```
 
 ## 作为属性名的Symbol
@@ -96,7 +111,7 @@ Object.defineProperty(a, mySymbol, { value: 'Hello!' });
 a[mySymbol] // "Hello!"
 ```
 
-上面代码通过方括号结构和Object.defineProperty，将对象的属性名指定为一个Symbol值。
+上面代码通过方括号结构和`Object.defineProperty`，将对象的属性名指定为一个Symbol值。
 
 注意，Symbol值作为对象属性名时，不能用点运算符。
 
@@ -145,7 +160,82 @@ log(log.levels.DEBUG, 'debug message');
 log(log.levels.INFO, 'info message');
 ```
 
+下面是另外一个例子。
+
+```javascript
+const COLOR_RED    = Symbol();
+const COLOR_GREEN  = Symbol();
+
+function getComplement(color) {
+  switch (color) {
+    case COLOR_RED:
+      return COLOR_GREEN;
+    case COLOR_GREEN:
+      return COLOR_RED;
+    default:
+      throw new Error('Undefined color');
+    }
+}
+```
+
+常量使用Symbol值最大的好处，就是其他任何值都不可能有相同的值了，因此可以保证上面的`switch`语句会按设计的方式工作。
+
 还有一点需要注意，Symbol值作为属性名时，该属性还是公开属性，不是私有属性。
+
+## 实例：消除魔术字符串
+
+魔术字符串指的是，在代码之中多次出现、与代码形成强耦合的某一个具体的字符串或者数值。风格良好的代码，应该尽量消除魔术字符串，该由含义清晰的变量代替。
+
+```javascript
+function getArea(shape, options) {
+  var area = 0;
+
+  switch (shape) {
+    case 'Triangle': // 魔术字符串
+      area = .5 * options.width * options.height;
+      break;
+    /* ... more code ... */
+  }
+
+  return area;
+}
+
+getArea('Triangle', { width: 100, height: 100 }); // 魔术字符串
+```
+
+上面代码中，字符串“Triangle”就是一个魔术字符串。它多次出现，与代码形成“强耦合”，不利于将来的修改和维护。
+
+常用的消除魔术字符串的方法，就是把它写成一个变量。
+
+```javascript
+var shapeType = {
+  triangle: 'Triangle'
+};
+
+function getArea(shape, options) {
+  var area = 0;
+  switch (shape) {
+    case shapeType.triangle:
+      area = .5 * options.width * options.height;
+      break;
+  }
+  return area;
+}
+
+getArea(shapeType.triangle, { width: 100, height: 100 });
+```
+
+上面代码中，我们把“Triangle”写成`shapeType`对象的`triangle`属性，这样就消除了强耦合。
+
+如果仔细分析，可以发现`shapeType.triangle`等于哪个值并不重要，只要确保不会跟其他`shapeType`属性的值冲突即可。因此，这里就很适合改用Symbol值。
+
+```javascript
+const shapeType = {
+  triangle: Symbol()
+};
+```
+
+上面代码中，除了将`shapeType.triangle`的值设为一个Symbol，其他地方都不用修改。
 
 ## 属性名的遍历
 
@@ -272,7 +362,7 @@ var s2 = Symbol("foo");
 Symbol.keyFor(s2) // undefined
 ```
 
-上面代码中，变量s2属于未登记的Symbol值，所以返回undefined。
+上面代码中，变量`s2`属于未登记的Symbol值，所以返回`undefined`。
 
 需要注意的是，`Symbol.for`为Symbol值登记的名字，是全局环境的，可以在不同的iframe或service worker中取到同一个值。
 
@@ -289,11 +379,11 @@ iframe.contentWindow.Symbol.for('foo') === Symbol.for('foo')
 
 ## 内置的Symbol值
 
-除了定义自己使用的Symbol值以外，ES6还提供一些内置的Symbol值，指向语言内部使用的方法。
+除了定义自己使用的Symbol值以外，ES6还提供了11个内置的Symbol值，指向语言内部使用的方法。
 
 ### Symbol.hasInstance
 
-对象的Symbol.hasInstance属性，指向一个内部方法。该对象使用instanceof运算符时，会调用这个方法，判断该对象是否为某个构造函数的实例。比如，`foo instanceof Foo`在语言内部，实际调用的是`Foo[Symbol.hasInstance](foo)`。
+对象的`Symbol.hasInstance`属性，指向一个内部方法。该对象使用`instanceof`运算符时，会调用这个方法，判断该对象是否为某个构造函数的实例。比如，`foo instanceof Foo`在语言内部，实际调用的是`Foo[Symbol.hasInstance](foo)`。
 
 ```javascript
 class MyClass {
@@ -307,7 +397,30 @@ o instanceof Array // false
 
 ### Symbol.isConcatSpreadable
 
-对象的Symbol.isConcatSpreadable属性，指向一个方法。该对象使用Array.prototype.concat()时，会调用这个方法，返回一个布尔值，表示该对象是否可以扩展成数组。
+对象的`Symbol.isConcatSpreadable`属性等于一个布尔值，表示该对象使用`Array.prototype.concat()`时，是否可以展开。
+
+```javascript
+let arr1 = ['c', 'd'];
+['a', 'b'].concat(arr1, 'e') // ['a', 'b', 'c', 'd', 'e']
+
+let arr2 = ['c', 'd'];
+arr2[Symbol.isConcatSpreadable] = false;
+['a', 'b'].concat(arr2, 'e') // ['a', 'b', ['c','d'], 'e']
+```
+
+上面代码说明，数组的`Symbol.isConcatSpreadable`属性默认为`true`，表示可以展开。
+
+类似数组的对象也可以展开，但它的`Symbol.isConcatSpreadable`属性默认为`false`，必须手动打开。
+
+```javascript
+let obj = {length: 2, 0: 'c', 1: 'd'};
+['a', 'b'].concat(obj, 'e') // ['a', 'b', obj, 'e']
+
+obj[Symbol.isConcatSpreadable] = true;
+['a', 'b'].concat(obj, 'e') // ['a', 'b', 'c', 'd', 'e']
+```
+
+对于一个类来说，`Symbol.isConcatSpreadable`属性必须写成一个返回布尔值的方法。
 
 ```javascript
 class A1 extends Array {
@@ -330,17 +443,29 @@ a2[1] = 6;
 // [1, 2, 3, 4, [5, 6]]
 ```
 
-上面代码中，类A1是可扩展的，类A2是不可扩展的，所以使用concat时有不一样的结果。
+上面代码中，类`A1`是可扩展的，类`A2`是不可扩展的，所以使用`concat`时有不一样的结果。
 
-### Symbol.isRegExp
+### Symbol.species
 
-对象的Symbol.isRegExp属性，指向一个方法。该对象被用作正则表达式时，会调用这个方法，返回一个布尔值，表示该对象是否为一个正则对象。
+对象的`Symbol.species`属性，指向一个方法。该对象作为构造函数创造实例时，会调用这个方法。即如果`this.constructor[Symbol.species]`存在，就会使用这个属性作为构造函数，来创造新的实例对象。
+
+`Symbol.species`属性默认的读取器如下。
+
+```javascript
+static get [Symbol.species]() {
+  return this;
+}
+```
 
 ### Symbol.match
 
-对象的Symbol.match属性，指向一个函数。当执行`str.match(myObject)`时，如果该属性存在，会调用它，返回该方法的返回值。
+对象的`Symbol.match`属性，指向一个函数。当执行`str.match(myObject)`时，如果该属性存在，会调用它，返回该方法的返回值。
 
 ```javascript
+String.prototype.match(regexp)
+// 等同于
+regexp[Symbol.match](this)
+
 class MyMatcher {
   [Symbol.match](string) {
     return 'hello world'.indexOf(string);
@@ -352,13 +477,23 @@ class MyMatcher {
 
 ### Symbol.replace
 
-对象的Symbol.replace属性，指向一个方法，当该对象被String.prototype.replace方法调用时，会返回该方法的返回值。
+对象的`Symbol.replace`属性，指向一个方法，当该对象被`String.prototype.replace`方法调用时，会返回该方法的返回值。
+
+```javascript
+String.prototype.replace(searchValue, replaceValue)
+// 等同于
+searchValue[Symbol.replace](this, replaceValue)
+```
 
 ### Symbol.search
 
-对象的Symbol.search属性，指向一个方法，当该对象被String.prototype.search方法调用时，会返回该方法的返回值。
+对象的`Symbol.search`属性，指向一个方法，当该对象被`String.prototype.search`方法调用时，会返回该方法的返回值。
 
 ```javascript
+String.prototype.search(regexp)
+// 等同于
+regexp[Symbol.search](this)
+
 class MySearch {
   constructor(value) {
     this.value = value;
@@ -372,7 +507,13 @@ class MySearch {
 
 ### Symbol.split
 
-对象的Symbol.split属性，指向一个方法，当该对象被String.prototype.split方法调用时，会返回该方法的返回值。
+对象的`Symbol.split`属性，指向一个方法，当该对象被`String.prototype.split`方法调用时，会返回该方法的返回值。
+
+```javascript
+String.prototype.split(separator, limit)
+// 等同于
+separator[Symbol.split](this, limit)
+```
 
 ### Symbol.iterator
 
@@ -402,13 +543,44 @@ for(let value of myCollection) {
 
 ### Symbol.toPrimitive
 
-对象的Symbol.toPrimitive属性，指向一个方法。该对象被转为原始类型的值时，会调用这个方法，返回该对象对应的原始类型值。
+对象的`Symbol.toPrimitive`属性，指向一个方法。该对象被转为原始类型的值时，会调用这个方法，返回该对象对应的原始类型值。
+
+`Symbol.toPrimitive`被调用时，会接受一个字符串参数，表示当前运算的模式，一共有三种模式。
+
+- Number：该场合需要转成数值
+- String：该场合需要转成字符串
+- Default：该场合可以转成数值，也可以转成字符串
+
+```javascript
+let obj = {
+  [Symbol.toPrimitive](hint) {
+    switch (hint) {
+      case 'number':
+        return 123;
+      case 'string':
+        return 'str';
+      case 'default':
+        return 'default';
+      default:
+        throw new Error();
+     }
+   }
+};
+
+2 * obj // 246
+3 + obj // '3default'
+obj === 'default' // true
+String(obj) // 'str'
+```
 
 ### Symbol.toStringTag
 
-对象的Symbol.toStringTag属性，指向一个方法。在该对象上面调用`Object.prototype.toString`方法时，如果这个属性存在，它的返回值会出现在toString方法返回的字符串之中，表示对象的类型。也就是说，这个属性可以用来定制`[object Object]`或`[object Array]`中object后面的那个字符串。
+对象的`Symbol.toStringTag`属性，指向一个方法。在该对象上面调用`Object.prototype.toString`方法时，如果这个属性存在，它的返回值会出现在`toString`方法返回的字符串之中，表示对象的类型。也就是说，这个属性可以用来定制`[object Object]`或`[object Array]`中object后面的那个字符串。
 
 ```javascript
+({[Symbol.toStringTag]: 'Foo'}.toString())
+// "[object Foo]"
+
 class Collection {
   get [Symbol.toStringTag]() {
     return 'xxx';
@@ -418,9 +590,29 @@ var x = new Collection();
 Object.prototype.toString.call(x) // "[object xxx]"
 ```
 
+ES6新增内置对象的`Symbol.toStringTag`属性值如下。
+
+- `JSON[Symbol.toStringTag]`：'JSON'
+- `Math[Symbol.toStringTag]`：'Math'
+- Module对象`M[Symbol.toStringTag]`：'Module'
+- `ArrayBuffer.prototype[Symbol.toStringTag]`：'ArrayBuffer'
+- `DataView.prototype[Symbol.toStringTag]`：'DataView'
+- `Map.prototype[Symbol.toStringTag]`：'Map'
+- `Promise.prototype[Symbol.toStringTag]`：'Promise'
+- `Set.prototype[Symbol.toStringTag]`：'Set'
+- `%TypedArray%.prototype[Symbol.toStringTag]`：'Uint8Array'等
+- `WeakMap.prototype[Symbol.toStringTag]`：'WeakMap'
+- `WeakSet.prototype[Symbol.toStringTag]`：'WeakSet'
+- `%MapIteratorPrototype%[Symbol.toStringTag]`：'Map Iterator'
+- `%SetIteratorPrototype%[Symbol.toStringTag]`：'Set Iterator'
+- `%StringIteratorPrototype%[Symbol.toStringTag]`：'String Iterator'
+- `Symbol.prototype[Symbol.toStringTag]`：'Symbol'
+- `Generator.prototype[Symbol.toStringTag]`：'Generator'
+- `GeneratorFunction.prototype[Symbol.toStringTag]`：'GeneratorFunction'
+
 ### Symbol.unscopables
 
-对象的Symbol.unscopables属性，指向一个对象。该对象指定了使用with关键字时，哪些属性会被with环境排除。
+对象的`Symbol.unscopables`属性，指向一个对象。该对象指定了使用`with`关键字时，哪些属性会被`with`环境排除。
 
 ```javascript
 Array.prototype[Symbol.unscopables]

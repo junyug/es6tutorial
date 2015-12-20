@@ -5,18 +5,31 @@
 ES6允许直接写入变量和函数，作为对象的属性和方法。这样的书写更加简洁。
 
 ```javascript
-function f( x, y ) {
-  return { x, y };
+var foo = 'bar';
+var baz = {foo};
+baz // {foo: "bar"}
+
+// 等同于
+var baz = {foo: foo};
+```
+
+上面代码表明，ES6允许在对象之中，只写属性名，不写属性值。这时，属性值等于属性名所代表的变量。下面是另一个例子。
+
+```javascript
+function f(x, y) {
+  return {x, y};
 }
 
 // 等同于
 
-function f( x, y ) {
-  return { x: x, y: y };
+function f(x, y) {
+  return {x: x, y: y};
 }
+
+f(1, 2) // Object {x: 1, y: 2}
 ```
 
-上面是属性简写的例子，方法也可以简写。
+除了属性简写，方法也可以简写。
 
 ```javascript
 var o = {
@@ -34,7 +47,7 @@ var o = {
 };
 ```
 
-下面是一个更实际的例子。
+下面是一个实际的例子。
 
 ```javascript
 var Person = {
@@ -56,7 +69,6 @@ var Person = {
 function getPoint() {
   var x = 1;
   var y = 10;
-
   return {x, y};
 }
 
@@ -64,19 +76,73 @@ getPoint()
 // {x:1, y:10}
 ```
 
-赋值器和取值器，也可以采用简洁写法。
+CommonJS模块输出变量，就非常合适使用简洁写法。
+
+```javascript
+var ms = {};
+
+function getItem (key) {
+  return key in ms ? ms[key] : null;
+}
+
+function setItem (key, value) {
+  ms[key] = value;
+}
+
+function clear () {
+  ms = {};
+}
+
+module.exports = { getItem, setItem, clear };
+// 等同于
+module.exports = {
+  getItem: getItem,
+  setItem: setItem,
+  clear: clear
+};
+```
+
+属性的赋值器（setter）和取值器（getter），事实上也是采用这种写法。
 
 ```javascript
 var cart = {
   _wheels: 4,
+
   get wheels () {
-    return this._wheels
+    return this._wheels;
   },
+
   set wheels (value) {
     if (value < this._wheels) {
-      throw new Error('hey, come back here!')
+      throw new Error('数值太小了！');
     }
-    this._wheels = value
+    this._wheels = value;
+  }
+}
+```
+
+注意，简洁写法的属性名总是字符串，这会导致一些看上去比较奇怪的结果。
+
+```javascript
+var obj = {
+  class () {}
+};
+
+// 等同于
+
+var obj = {
+  'class': function() {}
+};
+```
+
+上面代码中，`class`是字符串，所以不会因为它属于关键字，而导致语法解析报错。
+
+如果某个方法的值是一个Generator函数，前面需要加上星号。
+
+```javascript
+var obj = {
+  * m(){
+    yield 'hello world';
   }
 }
 ```
@@ -90,7 +156,7 @@ JavaScript语言定义对象的属性，有两种方法。
 obj.foo = true;
 
 // 方法二
-obj['a'+'bc'] = 123;
+obj['a' + 'bc'] = 123;
 ```
 
 上面代码的方法一是直接用标识符作为属性名，方法二是用表达式作为属性名，这时要将表达式放在方括号之内。
@@ -111,7 +177,7 @@ let propKey = 'foo';
 
 let obj = {
   [propKey]: true,
-  ['a'+'bc']: 123
+  ['a' + 'bc']: 123
 };
 ```
 
@@ -140,6 +206,19 @@ let obj = {
 };
 
 obj.hello() // hi
+```
+
+注意，属性名表达式与简洁表示法，不能同时使用，会报错。
+
+```javascript
+// 报错
+var foo = 'bar';
+var bar = 'abc';
+var baz = { [foo] };
+
+// 正确
+var foo = 'bar';
+var baz = { [foo]: 'abc'};
 ```
 
 ## 方法的name属性
@@ -190,7 +269,16 @@ obj[key2].name // ""
 
 ## Object.is()
 
-Object.is()用来比较两个值是否严格相等。它与严格比较运算符（===）的行为基本一致，不同之处只有两个：一是+0不等于-0，二是NaN等于自身。
+`Object.is`用来比较两个值是否严格相等。它与严格比较运算符（===）的行为基本一致。
+
+```javascript
+Object.is('foo', 'foo')
+// true
+Object.is({}, {})
+// false
+```
+
+不同之处只有两个：一是`+0`不等于`-0`，二是`NaN`等于自身。
 
 ```javascript
 +0 === -0 //true
@@ -200,7 +288,7 @@ Object.is(+0, -0) // false
 Object.is(NaN, NaN) // true
 ```
 
-ES5可以通过下面的代码，部署Object.is()。
+ES5可以通过下面的代码，部署`Object.is`。
 
 ```javascript
 Object.defineProperty(Object, 'is', {
@@ -220,7 +308,7 @@ Object.defineProperty(Object, 'is', {
 
 ## Object.assign()
 
-Object.assign方法用来将源对象（source）的所有可枚举属性，复制到目标对象（target）。它至少需要两个对象作为参数，第一个参数是目标对象，后面的参数都是源对象。只要有一个参数不是对象，就会抛出TypeError错误。
+`Object.assign`方法用来将源对象（source）的所有可枚举属性，复制到目标对象（target）。它至少需要两个对象作为参数，第一个参数是目标对象，后面的参数都是源对象。只要有一个参数不是对象，就会抛出TypeError错误。
 
 ```javascript
 var target = { a: 1 };
@@ -244,7 +332,48 @@ Object.assign(target, source1, source2);
 target // {a:1, b:2, c:3}
 ```
 
-assign方法有很多用处。
+`Object.assign`只拷贝自身属性，不可枚举的属性（`enumerable`为false）和继承的属性不会被拷贝。
+
+```javascript
+Object.assign({b: 'c'},
+  Object.defineProperty({}, 'invisible', {
+    enumerable: false,
+    value: 'hello'
+  })
+)
+// { b: 'c' }
+```
+
+上面代码中，`Object.assign`要拷贝的对象只有一个不可枚举属性`invisible`，这个属性并没有被拷贝进去。
+
+属性名为Symbol值的属性，也会被`Object.assign`拷贝。
+
+```javascript
+Object.assign({ a: 'b' }, { [Symbol('c')]: 'd' })
+// { a: 'b', Symbol(c): 'd' }
+```
+
+对于嵌套的对象，`Object.assign`的处理方法是替换，而不是添加。
+
+```javascript
+var target = { a: { b: 'c', d: 'e' } }
+var source = { a: { b: 'hello' } }
+Object.assign(target, source)
+// { a: { b: 'hello' } }
+```
+
+上面代码中，`target`对象的`a`属性被`source`对象的`a`属性整个替换掉了，而不会得到`{ a: { b: 'hello', d: 'e' } }`的结果。这通常不是开发者想要的，需要特别小心。有一些函数库提供`Object.assign`的定制版本（比如Lodash的`_.defaultsDeep`方法），可以解决深拷贝的问题。
+
+注意，`Object.assign`可以用来处理数组，但是会把数组视为对象。
+
+```javascript
+Object.assign([1, 2, 3], [4, 5])
+// [4, 5, 3]
+```
+
+上面代码中，`Object.assign`把数组视为属性名为0、1、2的对象，因此目标数组的0号属性`4`覆盖了原数组的0号属性`1`。
+
+`Object.assign`方法有很多用处。
 
 **（1）为对象添加属性**
 
@@ -329,7 +458,95 @@ function processContent(options) {
 }
 ```
 
-上面代码中，DEFAULTS对象是默认值，options对象是用户提供的参数。assign方法将DEFAULTS和options合并成一个新对象，如果两者有同名属性，则option的属性值会覆盖DEFAULTS的属性值。
+上面代码中，`DEFAULTS`对象是默认值，`options`对象是用户提供的参数。`Object.assign`方法将`DEFAULTS`和`options`合并成一个新对象，如果两者有同名属性，则`option`的属性值会覆盖`DEFAULTS`的属性值。
+
+注意，由于存在深拷贝的问题，`DEFAULTS`对象和`options`对象的所有属性的值，都只能是简单类型，而不能指向另一个对象。否则，将导致`DEFAULTS`对象的该属性不起作用。
+
+## 属性的可枚举性
+
+对象的每个属性都有一个描述对象（Descriptor），用来控制该属性的行为。`Object.getOwnPropertyDescriptor`方法可以获取该属性的描述对象。
+
+```javascript
+let obj = { foo: 123 };
+ Object.getOwnPropertyDescriptor(obj, 'foo')
+ //   { value: 123,
+ //     writable: true,
+ //     enumerable: true,
+ //     configurable: true }
+```
+
+描述对象的`enumerable`属性，称为”可枚举性“，如果该属性为`false`，就表示某些操作会忽略当前属性。
+
+ES5有三个操作会忽略`enumerable`为`false`的属性。
+
+- for...in 循环：只遍历对象自身的和继承的可枚举的属性
+- Object.keys()：返回对象自身的所有可枚举的属性的键名
+- JSON.stringify()：只串行化对象自身的可枚举的属性
+
+ES6新增了两个操作，会忽略`enumerable`为`false`的属性。
+
+- Object.assign()：只拷贝对象自身的可枚举的属性
+- Reflect.enumerate()：返回所有`for...in`循环会遍历的属性
+
+这五个操作之中，只有`for...in`和`Reflect.enumerate()`会返回继承的属性。实际上，引入`enumerable`的最初目的，就是让某些属性可以规避掉`for...in`操作。比如，对象原型的`toString`方法，以及数组的`length`属性，就通过这种手段，不会被`for...in`遍历到。
+
+```javascript
+Object.getOwnPropertyDescriptor(Object.prototype, 'toString').enumerable
+// false
+
+Object.getOwnPropertyDescriptor([], 'length').enumerable
+// false
+```
+
+另外，ES6规定，所有Class的原型的方法都是不可枚举的。
+
+```javascript
+Object.getOwnPropertyDescriptor(class {foo() {}}.prototype, 'foo').enumerable
+// false
+```
+
+总的来说，操作中引入继承的属性会让问题复杂化，大多数时候，我们只关心对象自身的属性。所以，尽量不要用`for...in`循环，而用`Object.keys()`代替。
+
+## 属性的遍历
+
+ES6一共有6种方法可以遍历对象的属性。
+
+**（1）for...in**
+
+`for...in`循环遍历对象自身的和继承的可枚举属性（不含Symbol属性）。
+
+**（2）Object.keys(obj)**
+
+`Object.keys`返回一个数组，包括对象自身的（不含继承的）所有可枚举属性（不含Symbol属性）。
+
+**（3）Object.getOwnPropertyNames(obj)**
+
+`Object.getOwnPropertyNames`返回一个数组，包含对象自身的所有属性（不含Symbol属性，但是包括不可枚举属性）。
+
+**（4）Object.getOwnPropertySymbols(obj)**
+
+`Object.getOwnPropertySymbols`返回一个数组，包含对象自身的所有Symbol属性。
+
+**（5）Reflect.ownKeys(obj)**
+
+`Reflect.ownKeys`返回一个数组，包含对象自身的所有属性，不管是属性名是Symbol或字符串，也不管是否可枚举。
+
+**（6）Reflect.enumerate(obj)**
+
+`Reflect.enumerate`返回一个Iterator对象，遍历对象自身的和继承的所有可枚举属性（不含Symbol属性），与`for...in`循环相同。
+
+以上的6种方法遍历对象的属性，都遵守同样的属性遍历的次序规则。
+
+- 首先遍历所有属性名为数值的属性，按照数字排序。
+- 其次遍历所有属性名为字符串的属性，按照生成时间排序。
+- 最后遍历所有属性名为Symbol值的属性，按照生成时间排序。
+
+```javascript
+Reflect.ownKeys({ [Symbol()]:0, b:0, 10:0, 2:0, a:0 })
+// ['2', '10', 'b', 'a', Symbol()]
+```
+
+上面代码中，`Reflect.ownKeys`方法返回一个数组，包含了参数对象的所有属性。这个数组的属性次序是这样的，首先是数值属性`2`和`10`，其次是字符串属性`b`和`a`，最后是Symbol属性。
 
 ## `__proto__`属性，Object.setPrototypeOf()，Object.getPrototypeOf()
 
@@ -349,7 +566,7 @@ var obj = Object.create(someOtherObj);
 obj.method = function() { ... }
 ```
 
-该属性没有写入ES6的正文，而是写入了附录，原因是`__proto__`前后的双引号，说明它本质上是一个内部属性，而不是一个正式的对外的API，只是由于浏览器广泛支持，才被加入了ES6。标准明确规定，只有浏览器必须部署这个属性，其他运行环境不一定需要部署，而且新的代码最好认为这个属性是不存在的。因此，无论从语义的角度，还是从兼容性的角度，都不要使用这个属性，而是使用下面的`Object.setPrototypeOf()`（写操作）、`Object.getPrototypeOf()`（读操作）、`Object.create()`（生成操作）代替。
+该属性没有写入ES6的正文，而是写入了附录，原因是`__proto__`前后的双下划线，说明它本质上是一个内部属性，而不是一个正式的对外的API，只是由于浏览器广泛支持，才被加入了ES6。标准明确规定，只有浏览器必须部署这个属性，其他运行环境不一定需要部署，而且新的代码最好认为这个属性是不存在的。因此，无论从语义的角度，还是从兼容性的角度，都不要使用这个属性，而是使用下面的`Object.setPrototypeOf()`（写操作）、`Object.getPrototypeOf()`（读操作）、`Object.create()`（生成操作）代替。
 
 在实现上，`__proto__`调用的是`Object.prototype.__proto__`，具体实现如下。
 
@@ -389,7 +606,7 @@ Object.getPrototypeOf({ __proto__: null })
 
 **（2）Object.setPrototypeOf()**
 
-Object.setPrototypeOf方法的作用与__proto__相同，用来设置一个对象的prototype对象。它是ES6正式推荐的设置原型对象的方法。
+`Object.setPrototypeOf`方法的作用与`__proto__`相同，用来设置一个对象的`prototype`对象。它是ES6正式推荐的设置原型对象的方法。
 
 ```javascript
 // 格式
@@ -448,93 +665,6 @@ Object.setPrototypeOf(rec, Object.prototype);
 Object.getPrototypeOf(rec) === Rectangle.prototype
 // false
 ```
-
-## Object.observe()，Object.unobserve()
-
-Object.observe方法用来监听对象（以及数组）的变化。一旦监听对象发生变化，就会触发回调函数。
-
-```javascript
-var user = {};
-Object.observe(user, function(changes){
-  changes.forEach(function(change) {
-    user.fullName = user.firstName+" "+user.lastName;
-  });
-});
-
-user.firstName = 'Michael';
-user.lastName = 'Jackson';
-user.fullName // 'Michael Jackson'
-```
-
-上面代码中，Object.observer方法监听user对象。一旦该对象发生变化，就自动生成fullName属性。
-
-一般情况下，Object.observe方法接受两个参数，第一个参数是监听的对象，第二个函数是一个回调函数。一旦监听对象发生变化（比如新增或删除一个属性），就会触发这个回调函数。很明显，利用这个方法可以做很多事情，比如自动更新DOM。
-
-```javascript
-var div = $("#foo");
-
-Object.observe(user, function(changes){
-  changes.forEach(function(change) {
-    var fullName = user.firstName+" "+user.lastName;
-    div.text(fullName);
-  });
-});
-```
-
-上面代码中，只要user对象发生变化，就会自动更新DOM。如果配合jQuery的change方法，就可以实现数据对象与DOM对象的双向自动绑定。
-
-回调函数的changes参数是一个数组，代表对象发生的变化。下面是一个更完整的例子。
-
-```javascript
-var o = {};
-
-function observer(changes){
-  changes.forEach(function(change) {
-    console.log('发生变动的属性：' + change.name);
-    console.log('变动前的值：' + change.oldValue);
-    console.log('变动后的值：' + change.object[change.name]);
-    console.log('变动类型：' + change.type);
-  });
-}
-
-Object.observe(o, observer);
-```
-
-参照上面代码，Object.observe方法指定的回调函数，接受一个数组（changes）作为参数。该数组的成员与对象的变化一一对应，也就是说，对象发生多少个变化，该数组就有多少个成员。每个成员是一个对象（change），它的name属性表示发生变化源对象的属性名，oldValue属性表示发生变化前的值，object属性指向变动后的源对象，type属性表示变化的种类。基本上，change对象是下面的样子。
-
-```javascript
-var change = {
-  object: {...},
-  type: 'update',
-  name: 'p2',
-  oldValue: 'Property 2'
-}
-```
-
-Object.observe方法目前共支持监听六种变化。
-
-- add：添加属性
-- update：属性值的变化
-- delete：删除属性
-- setPrototype：设置原型
-- reconfigure：属性的attributes对象发生变化
-- preventExtensions：对象被禁止扩展（当一个对象变得不可扩展时，也就不必再监听了）
-
-Object.observe方法还可以接受第三个参数，用来指定监听的事件种类。
-
-```javascript
-Object.observe(o, observer, ['delete']);
-```
-
-上面的代码表示，只在发生delete事件时，才会调用回调函数。
-
-Object.unobserve方法用来取消监听。
-
-```javascript
-Object.unobserve(o, observer);
-```
-
-注意，Object.observe和Object.unobserve这两个方法不属于ES6，而是属于ES7的一部分。不过，Chrome浏览器从33版起就已经支持。
 
 ## 对象的扩展运算符
 
